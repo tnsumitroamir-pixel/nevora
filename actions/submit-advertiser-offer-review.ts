@@ -18,7 +18,7 @@ export default defineAction({
     await requireAdvertiserProfile(ownerEmail);
     const db = await getDb();
     const [current] = await db
-      .select({ status: schema.offers.status, productId: schema.offers.productId })
+      .select({ status: schema.offers.status, productId: schema.offers.productId, payoutIdr: schema.offers.payoutIdr, campaignId: schema.offers.campaignId })
       .from(schema.offers)
       .where(
         and(
@@ -30,6 +30,12 @@ export default defineAction({
     if (!current) {
       fail("Offer not found.", { statusCode: 404, errorCode: "offer_not_found" });
     }
+    if (current.campaignId) {
+      fail("Campaign offer harus diajukan bersama campaign terkait.", {
+        statusCode: 409,
+        errorCode: "campaign_offer_review_required",
+      });
+    }
     if (current.status !== "Draft" && current.status !== "Rejected") {
       fail("Offer is not ready for review.", {
         statusCode: 409,
@@ -37,7 +43,7 @@ export default defineAction({
       });
     }
 
-    if (!current.productId) {
+    if (!current.productId || Number(current.payoutIdr) < 1) {
       fail("Offer harus ditautkan ke produk sebelum diajukan untuk review.", {
         statusCode: 409,
         errorCode: "offer_product_required",

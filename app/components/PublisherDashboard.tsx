@@ -82,6 +82,7 @@ export function PublisherDashboard() {
   );
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedChannels, setSelectedChannels] = useState<Record<string, string>>({});
   const applyOffer = useActionMutation("apply-publisher-offer");
   const saveProfile = useActionMutation("save-publisher-profile");
   const saveChannel = useActionMutation("save-publisher-channel");
@@ -229,6 +230,7 @@ export function PublisherDashboard() {
   }
 
   const applicationsByOffer = new Map(data.applications.map((application) => [application.offerId, application]));
+  const activeChannels = data.channels.filter((channel) => channel.status === "Active");
   const pendingEarningsIdr = data.summary?.pendingEarningsIdr ?? 0;
 
   const submitForm =
@@ -271,15 +273,31 @@ export function PublisherDashboard() {
             </section>
 
             <section className="ad-panel publisher-data-panel" id="publisher-marketplace">
-              <div className="ad-panel-heading"><h2>Marketplace Offer Aktif</h2><span>Komisi per conversion disetujui</span></div>
+              <div className="ad-panel-heading"><h2>Marketplace Campaign &amp; Offer Aktif</h2><span>Supply advertiser dengan komisi per conversion</span></div>
               {visibleOffers.length === 0 ? <Empty>{search ? "Tidak ada offer yang cocok dengan pencarian." : "Belum ada offer aktif dari advertiser."}</Empty> : visibleOffers.map((offer) => {
                 const application = applicationsByOffer.get(offer.id);
                 return (
                   <article className="publisher-data-row" key={offer.id}>
-                    <div><b>{offer.name}</b><small>{offer.category || "Kategori belum ditentukan"} · {offer.advertiserName ?? "Advertiser"}</small></div>
+                    <div><b>{offer.campaignName ?? offer.name}</b><small>{offer.category || "Kategori belum ditentukan"} · {offer.advertiserName ?? "Advertiser"}{offer.campaignName ? ` · Offer: ${offer.name}` : ""}</small></div>
                     <strong>{formatMoney(offer.payoutIdr)} / conversion</strong>
                     <a href={offer.websiteUrl} rel="noreferrer" target="_blank">Detail offer</a>
-                    {application ? <span className="publisher-data-status">{application.status}</span> : <button disabled={applyOffer.isPending} onClick={() => void run(() => applyOffer.mutateAsync({ offerId: offer.id }), "Pengajuan offer dicatat. Tautan tracking aktif setelah Admin menyetujui.")} type="button">Ajukan</button>}
+                    {application && application.status !== "Rejected" ? <span className="publisher-data-status">{application.status}</span> : activeChannels.length > 0 ? (
+                      <div className="publisher-apply-controls">
+                        <select
+                          aria-label={`Channel promosi untuk ${offer.name}`}
+                          onChange={(event) => setSelectedChannels((current) => ({ ...current, [offer.id]: event.target.value }))}
+                          value={selectedChannels[offer.id] ?? ""}
+                        >
+                          <option value="" disabled>Pilih channel</option>
+                          {activeChannels.map((channel) => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
+                        </select>
+                        <button
+                          disabled={applyOffer.isPending || !selectedChannels[offer.id]}
+                          onClick={() => void run(() => applyOffer.mutateAsync({ offerId: offer.id, channelId: selectedChannels[offer.id] }), "Pengajuan dicatat untuk channel terverifikasi. Tautan tracking aktif setelah persetujuan admin.")}
+                          type="button"
+                        >{application ? "Ajukan ulang" : "Ajukan"}</button>
+                      </div>
+                    ) : <a href="#publisher-channels">Verifikasi channel untuk mendaftar</a>}
                   </article>
                 );
               })}
@@ -289,13 +307,13 @@ export function PublisherDashboard() {
               <div className="ad-panel-heading"><h2>Campaign Saya · Pengajuan Offer</h2></div>
               {data.applications.length === 0 ? <Empty>Belum ada pengajuan offer.</Empty> : data.applications.map((application) => {
                 const tracking = data.trackingLinks.find((link) => link.offerId === application.offerId);
-                return <article className="publisher-data-row" key={application.id}><div><b>{application.offerName ?? "Offer"}</b><small>Diajukan {formatDate(application.createdAt)}</small></div><span className="publisher-data-status">{application.status}</span>{tracking && application.status === "Approved" && <a href={`${appPath(`/api/track/${tracking.token}`)}`} rel="noreferrer" target="_blank">Buka tautan tracking</a>}</article>;
+                return <article className="publisher-data-row" key={application.id}><div><b>{application.offerName ?? "Offer"}</b><small>{application.channelName ?? "Channel tidak tersedia"} · diajukan {formatDate(application.createdAt)}</small></div><span className="publisher-data-status">{application.status}</span>{tracking && application.status === "Approved" && <a href={`${appPath(`/api/track/${tracking.token}`)}`} rel="noreferrer" target="_blank">Buka tautan tracking</a>}</article>;
               })}
             </section>
 
             <section className="ad-panel publisher-data-panel" id="publisher-tracking">
               <div className="ad-panel-heading"><h2>Tautan Tracking & Klik</h2></div>
-              {data.trackingLinks.length === 0 ? <Empty>Tautan tracking dibuat saat mengajukan offer dan aktif setelah disetujui Admin.</Empty> : data.trackingLinks.map((link) => <article className="publisher-data-row" key={link.id}><div><b>{link.offerName ?? "Offer"}</b><small>{appPath(`/api/track/${link.token}`)}</small></div><span>{numberFormat.format(link.clicks)} klik</span><button onClick={() => void navigator.clipboard.writeText(`${window.location.origin}${appPath(`/api/track/${link.token}`)}`).then(() => setNotice("Tautan tracking disalin."))} type="button">Salin tautan</button></article>)}
+              {data.trackingLinks.length === 0 ? <Empty>Tautan tracking dibuat saat mengajukan offer dan aktif setelah disetujui Admin.</Empty> : data.trackingLinks.map((link) => <article className="publisher-data-row" key={link.id}><div><b>{link.offerName ?? "Offer"}</b><small>{link.channelName ?? "Channel aktif"} · {appPath(`/api/track/${link.token}`)}</small></div><span>{numberFormat.format(link.clicks)} klik</span><button onClick={() => void navigator.clipboard.writeText(`${window.location.origin}${appPath(`/api/track/${link.token}`)}`).then(() => setNotice("Tautan tracking disalin."))} type="button">Salin tautan</button></article>)}
             </section>
 
             <section className="ad-panel publisher-data-panel" id="publisher-performance">

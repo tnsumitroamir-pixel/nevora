@@ -1,5 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
 import { defineAction, fail } from "@agent-native/core/action";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb, schema } from "../server/db.js";
@@ -40,7 +40,7 @@ export default defineAction({
         })
         .from(schema.offers)
         .leftJoin(schema.products, eq(schema.offers.productId, schema.products.id))
-        .where(eq(schema.offers.status, "Pending Review"))
+        .where(and(eq(schema.offers.status, "Pending Review"), isNull(schema.offers.campaignId)))
         .orderBy(desc(schema.offers.createdAt)),
     ]);
 

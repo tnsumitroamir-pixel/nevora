@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, ne, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, ne, or, sql, sum } from "drizzle-orm";
 
 import { fail } from "@agent-native/core/action";
 
@@ -103,6 +103,7 @@ export async function getPublisherDashboard(email: string) {
         category: schema.products.category,
         websiteUrl: schema.products.websiteUrl,
         advertiserName: schema.advertiserProfiles.businessName,
+        campaignName: schema.advertiserCampaigns.name,
         createdAt: schema.offers.createdAt,
       })
       .from(schema.offers)
@@ -111,11 +112,15 @@ export async function getPublisherDashboard(email: string) {
         schema.advertiserProfiles,
         eq(schema.offers.advertiserEmail, schema.advertiserProfiles.ownerEmail),
       )
+      .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
+      .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
       .where(
         and(
           eq(schema.offers.status, "Active"),
           eq(schema.products.status, "Active"),
+          eq(schema.users.status, "active"),
           ne(schema.products.websiteUrl, ""),
+          or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
         ),
       )
       .orderBy(desc(schema.offers.createdAt)),
@@ -124,6 +129,8 @@ export async function getPublisherDashboard(email: string) {
         id: schema.publisherOfferApplications.id,
         offerId: schema.publisherOfferApplications.offerId,
         status: schema.publisherOfferApplications.status,
+        channelId: schema.publisherOfferApplications.channelId,
+        channelName: schema.publisherChannels.name,
         createdAt: schema.publisherOfferApplications.createdAt,
         offerName: schema.offers.name,
         payoutIdr: schema.offers.payoutIdr,
@@ -132,6 +139,13 @@ export async function getPublisherDashboard(email: string) {
       .leftJoin(
         schema.offers,
         eq(schema.publisherOfferApplications.offerId, schema.offers.id),
+      )
+      .leftJoin(
+        schema.publisherChannels,
+        and(
+          eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+          eq(schema.publisherOfferApplications.publisherEmail, schema.publisherChannels.ownerEmail),
+        ),
       )
       .where(eq(schema.publisherOfferApplications.publisherEmail, email))
       .orderBy(desc(schema.publisherOfferApplications.createdAt)),
@@ -147,6 +161,7 @@ export async function getPublisherDashboard(email: string) {
         offerId: schema.publisherTrackingLinks.offerId,
         createdAt: schema.publisherTrackingLinks.createdAt,
         offerName: schema.offers.name,
+        channelName: schema.publisherChannels.name,
         clicks: count(schema.publisherClicks.id),
       })
       .from(schema.publisherTrackingLinks)
@@ -155,12 +170,22 @@ export async function getPublisherDashboard(email: string) {
         eq(schema.publisherTrackingLinks.offerId, schema.offers.id),
       )
       .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
+      .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
+      .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
       .innerJoin(
         schema.publisherOfferApplications,
         and(
           eq(schema.publisherOfferApplications.offerId, schema.publisherTrackingLinks.offerId),
           eq(schema.publisherOfferApplications.publisherEmail, schema.publisherTrackingLinks.publisherEmail),
           eq(schema.publisherOfferApplications.status, "Approved"),
+        ),
+      )
+      .innerJoin(
+        schema.publisherChannels,
+        and(
+          eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+          eq(schema.publisherOfferApplications.publisherEmail, schema.publisherChannels.ownerEmail),
+          eq(schema.publisherChannels.status, "Active"),
         ),
       )
       .leftJoin(
@@ -172,6 +197,8 @@ export async function getPublisherDashboard(email: string) {
           eq(schema.publisherTrackingLinks.publisherEmail, email),
           eq(schema.offers.status, "Active"),
           eq(schema.products.status, "Active"),
+          eq(schema.users.status, "active"),
+          or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
         ),
       )
       .groupBy(
@@ -180,6 +207,7 @@ export async function getPublisherDashboard(email: string) {
         schema.publisherTrackingLinks.offerId,
         schema.publisherTrackingLinks.createdAt,
         schema.offers.name,
+        schema.publisherChannels.name,
       )
       .orderBy(desc(schema.publisherTrackingLinks.createdAt)),
     db

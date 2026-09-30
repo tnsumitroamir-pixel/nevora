@@ -31,6 +31,10 @@ import {
 import { useState, type FormEvent } from "react";
 
 import { AdvertiserCatalog } from "@/components/AdvertiserCatalog";
+import {
+  AdvertiserPublisherMarketplace,
+  type AdvertiserPublisherTab,
+} from "@/components/AdvertiserPublisherMarketplace";
 import { AdvertiserPublisherConversions } from "@/components/AdvertiserPublisherConversions";
 import {
   RoleNavigation,
@@ -130,9 +134,13 @@ function DashboardLoading() {
 function CreateCampaignDialog({
   open,
   onOpenChange,
+  products,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  products: { id: string; name: string }[];
+  onCreated: () => void;
 }) {
   const [notice, setNotice] = useState("");
   const createCampaign = useActionMutation("create-campaign");
@@ -149,9 +157,12 @@ function CreateCampaignDialog({
           | "Purchase"
           | "View"
           | "Lead",
+        productId: String(values.get("productId") || ""),
+        payoutIdr: Number(values.get("payoutIdr")),
         budgetIdr: Number(values.get("budgetIdr")),
       });
       onOpenChange(false);
+      onCreated();
     } catch (error) {
       setNotice(actionErrorMessage(error) ?? "Campaign belum dapat dibuat.");
     }
@@ -163,7 +174,7 @@ function CreateCampaignDialog({
         <div className="ad-dialog-heading">
           <DialogTitle>Buat Campaign</DialogTitle>
           <DialogDescription>
-            Campaign akan disimpan sebagai draft.
+            Campaign dan offer berkomisi disimpan sebagai draft untuk diajukan ke admin.
           </DialogDescription>
         </div>
         <form className="ad-campaign-form" onSubmit={handleSubmit}>
@@ -181,9 +192,21 @@ function CreateCampaignDialog({
             </select>
           </label>
           <label>
-            Anggaran (IDR)
-            <input name="budgetIdr" type="number" min="1" step="1" required />
+            Produk aktif
+            <select name="productId" defaultValue="" required disabled={products.length === 0}>
+              <option value="" disabled>Pilih produk aktif</option>
+              {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+            </select>
           </label>
+          <label>
+            Komisi publisher per conversion (IDR)
+            <input name="payoutIdr" type="number" min="1" max="2147483647" step="1" required />
+          </label>
+          <label>
+            Budget campaign (IDR)
+            <input name="budgetIdr" type="number" min="1" max="2147483647" step="1" required />
+          </label>
+          {products.length === 0 && <p className="ad-form-error">Campaign berkomisi membutuhkan produk aktif yang sudah disetujui admin.</p>}
           {notice && (
             <p className="ad-form-error" role="alert">
               {notice}
@@ -191,7 +214,7 @@ function CreateCampaignDialog({
           )}
           <button
             className="ad-button ad-button-primary"
-            disabled={createCampaign.isPending}
+            disabled={createCampaign.isPending || products.length === 0}
             type="submit"
           >
             {createCampaign.isPending ? "Menyimpan…" : "Simpan Draft"}
@@ -235,6 +258,10 @@ function CampaignDetailsDialog({
               <div>
                 <dt>Anggaran</dt>
                 <dd>{formatRupiah(Number(campaign.budgetIdr))}</dd>
+              </div>
+              <div>
+                <dt>Komisi per conversion</dt>
+                <dd>{formatRupiah(Number(campaign.payoutIdr))}</dd>
               </div>
               <div>
                 <dt>Biaya tersalurkan</dt>
@@ -379,6 +406,8 @@ export default function AdvertiserDashboardRoute() {
     { enabled: session.status === "authenticated" },
   );
   const [campaignDialogOpen, setCampaignDialogOpen] = useState(false);
+  const [submitCampaignNotice, setSubmitCampaignNotice] = useState("");
+  const submitCampaign = useActionMutation("submit-advertiser-campaign-review");
   const [selectedCampaign, setSelectedCampaign] = useState<Record<
     string,
     unknown
@@ -389,6 +418,7 @@ export default function AdvertiserDashboardRoute() {
   const [catalogCreate, setCatalogCreate] = useState<"product" | null>(null);
   const [campaignStatusFilter, setCampaignStatusFilter] = useState("all");
   const [publisherConversionView, setPublisherConversionView] = useState(false);
+  const [publisherMarketplaceView, setPublisherMarketplaceView] = useState<AdvertiserPublisherTab | null>(null);
 
   if (session.status === "loading" || session.status === "signing-out") {
     return <DashboardLoading />;
@@ -530,6 +560,8 @@ export default function AdvertiserDashboardRoute() {
         {
           label: "Semua Produk",
           onSelect: () => {
+            setPublisherMarketplaceView(null);
+            setPublisherConversionView(false);
             setCatalogTab("products");
             setCatalogCreate(null);
             setNavigationPreview("");
@@ -538,6 +570,8 @@ export default function AdvertiserDashboardRoute() {
         {
           label: "Tambah Produk",
           onSelect: () => {
+            setPublisherMarketplaceView(null);
+            setPublisherConversionView(false);
             setCatalogTab("products");
             setCatalogCreate("product");
             setNavigationPreview("");
@@ -546,6 +580,8 @@ export default function AdvertiserDashboardRoute() {
         {
           label: "Offer",
           onSelect: () => {
+            setPublisherMarketplaceView(null);
+            setPublisherConversionView(false);
             setCatalogTab("offers");
             setCatalogCreate(null);
             setNavigationPreview("");
@@ -565,16 +601,31 @@ export default function AdvertiserDashboardRoute() {
       items: [
         {
           label: "Publisher",
-          onSelect: () => setNavigationPreview("Publisher Marketplace"),
+          onSelect: () => {
+            setPublisherMarketplaceView("directory");
+            setPublisherConversionView(false);
+            setCatalogTab(null);
+            setNavigationPreview("");
+          },
         },
         {
           label: "Publisher yang Dipilih",
-          onSelect: () => setNavigationPreview("Publisher yang Dipilih"),
+          onSelect: () => {
+            setPublisherMarketplaceView("selected");
+            setPublisherConversionView(false);
+            setCatalogTab(null);
+            setNavigationPreview("");
+          },
         },
         {
           label: "Campaign Terbuka",
           href: "#campaigns",
-          onSelect: () => setCampaignStatusFilter("active"),
+          onSelect: () => {
+            setPublisherMarketplaceView(null);
+            setPublisherConversionView(false);
+            setCatalogTab(null);
+            setCampaignStatusFilter("active");
+          },
         },
         {
           label: "Private Campaign",
@@ -591,8 +642,8 @@ export default function AdvertiserDashboardRoute() {
       label: "Tracking",
       icon: IconTargetArrow,
       items: [
-        { label: "Click", href: "#performance" },
-        { label: "Conversion", onSelect: () => setPublisherConversionView(true) },
+        { label: "Click", onSelect: () => { setPublisherMarketplaceView(null); setCatalogTab(null); setPublisherConversionView(true); } },
+        { label: "Conversion", onSelect: () => { setPublisherMarketplaceView(null); setCatalogTab(null); setPublisherConversionView(true); } },
         { label: "Attribution", href: "#performance" },
         { label: "Postback", href: "#performance" },
         { label: "Tracking Test", href: "#performance" },
@@ -710,7 +761,12 @@ export default function AdvertiserDashboardRoute() {
           </div>
         </header>
 
-        {publisherConversionView ? (
+        {publisherMarketplaceView ? (
+          <AdvertiserPublisherMarketplace
+            initialTab={publisherMarketplaceView}
+            onBack={() => setPublisherMarketplaceView(null)}
+          />
+        ) : publisherConversionView ? (
           <AdvertiserPublisherConversions onBack={() => setPublisherConversionView(false)} />
         ) : catalogTab ? (
           <AdvertiserCatalog
@@ -841,6 +897,7 @@ export default function AdvertiserDashboardRoute() {
             </section>
 
             <section className="ad-panel ad-campaigns-panel" id="campaigns">
+              {submitCampaignNotice && <p className="ad-catalog-notice" role="status">{submitCampaignNotice}</p>}
               <div className="ad-panel-heading">
                 <h2>Campaign Terbaru</h2>
                 <span className="ad-result-count">
@@ -855,6 +912,7 @@ export default function AdvertiserDashboardRoute() {
                         <th>Nama Campaign</th>
                         <th>Tujuan</th>
                         <th>Anggaran</th>
+                        <th>Komisi Publisher</th>
                         <th>Performa (7 hari)</th>
                         <th>Status</th>
                         <th>Aksi</th>
@@ -876,6 +934,7 @@ export default function AdvertiserDashboardRoute() {
                           </td>
                           <td>{campaign.objective}</td>
                           <td>{formatRupiah(campaign.budgetIdr)}</td>
+                          <td>{formatRupiah(campaign.payoutIdr)}</td>
                           <td>
                             <div className="ad-performance-cell">
                               <b>{formatNumber(campaign.clicks)} klik</b>
@@ -897,6 +956,25 @@ export default function AdvertiserDashboardRoute() {
                             </span>
                           </td>
                           <td>
+                            {campaign.status === "Draft" || campaign.status === "Rejected" ? (
+                              <button
+                                className="ad-table-action"
+                                disabled={submitCampaign.isPending}
+                                type="button"
+                                onClick={async () => {
+                                  setSubmitCampaignNotice("");
+                                  try {
+                                    await submitCampaign.mutateAsync({ id: campaign.id });
+                                    await refetch();
+                                    setSubmitCampaignNotice("Campaign diajukan ke admin dan akan tampil di marketplace publisher setelah disetujui.");
+                                  } catch (error) {
+                                    setSubmitCampaignNotice(actionErrorMessage(error) ?? "Campaign belum dapat diajukan.");
+                                  }
+                                }}
+                              >
+                                Ajukan Review
+                              </button>
+                            ) : null}
                             <button
                               className="ad-table-action"
                               type="button"
@@ -1045,6 +1123,8 @@ export default function AdvertiserDashboardRoute() {
       <CreateCampaignDialog
         open={campaignDialogOpen}
         onOpenChange={setCampaignDialogOpen}
+        products={data.activeProducts}
+        onCreated={() => void refetch()}
       />
       <CampaignDetailsDialog
         campaign={selectedCampaign}

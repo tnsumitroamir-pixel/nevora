@@ -119,7 +119,7 @@ export function AdvertiserCatalog({
         <div>
           <span className="ad-kicker">Advertiser</span>
           <h1>Produk &amp; Offer</h1>
-          <p>Kelola katalog dan ajukan perubahan untuk ditinjau admin.</p>
+          <p>Produk adalah supply untuk publisher. Mulai dari e-commerce/retail, beauty &amp; personal care, home &amp; living, aplikasi/game, layanan digital, atau travel.</p>
         </div>
         <button className="ad-button ad-button-light" onClick={onBack} type="button">
           Kembali ke Dashboard
@@ -232,8 +232,10 @@ export function AdvertiserCatalog({
                         <td className="ad-catalog-actions">
                           {(offer.status === "Draft" || offer.status === "Rejected") && (
                             <>
-                              <button className="ad-table-action" onClick={() => { setEditingOffer(offer); setOfferDialogOpen(true); }} type="button">Edit</button>
-                              <button className="ad-table-action" disabled={submitOffer.isPending} onClick={() => void handleSubmitOffer(String(offer.id))} type="button">Ajukan Review</button>
+                              {!offer.campaignId && <button className="ad-table-action" onClick={() => { setEditingOffer(offer); setOfferDialogOpen(true); }} type="button">Edit</button>}
+                            {offer.campaignId && <span className="ad-catalog-status">Dikelola oleh campaign</span>}
+                              {!offer.campaignId && <button className="ad-table-action" disabled={submitOffer.isPending} onClick={() => void handleSubmitOffer(String(offer.id))} type="button">Ajukan Review</button>}
+                              {offer.campaignId && <span className="ad-catalog-status">Ajukan melalui Campaign</span>}
                             </>
                           )}
                         </td>
@@ -251,12 +253,27 @@ export function AdvertiserCatalog({
         <DialogContent className="ad-dialog-content">
           <div className="ad-dialog-heading">
             <DialogTitle>{editingProduct ? "Edit Produk" : "Tambah Produk"}</DialogTitle>
-            <DialogDescription>Produk disimpan sebagai draft sampai diajukan untuk review.</DialogDescription>
+            <DialogDescription>Produk disimpan sebagai draft. Lengkapi website tujuan dan kategori sebelum mengajukan agar publisher dapat mempromosikannya.</DialogDescription>
           </div>
           <form className="ad-campaign-form" key={String(editingProduct?.id ?? "new-product")} onSubmit={handleSaveProduct}>
             <label>Nama produk<input name="name" defaultValue={String(editingProduct?.name ?? "")} maxLength={160} required /></label>
-            <label>Website<input name="websiteUrl" type="url" defaultValue={String(editingProduct?.websiteUrl ?? "")} maxLength={2048} /></label>
-            <label>Kategori<input name="category" defaultValue={String(editingProduct?.category ?? "")} maxLength={100} /></label>
+            <label>Website<input name="websiteUrl" type="url" defaultValue={String(editingProduct?.websiteUrl ?? "")} maxLength={2048} required /></label>
+            <label>Kategori<input name="category" list="advertiser-product-categories" defaultValue={String(editingProduct?.category ?? "")} maxLength={100} required /></label>
+            <datalist id="advertiser-product-categories">
+              <option value="E-commerce & Retail" />
+              <option value="Beauty & Personal Care" />
+              <option value="Home & Living" />
+              <option value="Fashion" />
+              <option value="Electronics" />
+              <option value="FMCG" />
+              <option value="Aplikasi & Game" />
+              <option value="Layanan Digital" />
+              <option value="Bank & Keuangan" />
+              <option value="Makanan & Minuman" />
+              <option value="Marketplace" />
+              <option value="Brand Lokal" />
+              <option value="Travel" />
+            </datalist>
             <button className="ad-button ad-button-primary" disabled={saveProduct.isPending} type="submit">{saveProduct.isPending ? "Menyimpan…" : "Simpan Draft"}</button>
           </form>
         </DialogContent>
@@ -266,7 +283,7 @@ export function AdvertiserCatalog({
         <DialogContent className="ad-dialog-content">
           <div className="ad-dialog-heading">
             <DialogTitle>{editingOffer ? "Edit Offer" : "Tambah Offer"}</DialogTitle>
-            <DialogDescription>Offer terhubung ke produk aktif dan perlu review admin.</DialogDescription>
+            <DialogDescription>Gunakan aksi konversi yang terukur dan payout yang jelas per transaksi valid; offer terkait campaign dibuat dari form Campaign.</DialogDescription>
           </div>
           <form className="ad-campaign-form" key={String(editingOffer?.id ?? "new-offer")} onSubmit={handleSaveOffer}>
             <label>Nama offer<input name="name" defaultValue={String(editingOffer?.name ?? "")} maxLength={160} required /></label>
@@ -275,7 +292,7 @@ export function AdvertiserCatalog({
                 {products.filter((product) => product.status === "Active").map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </select>
             </label>
-            <label>Payout (IDR)<input name="payoutIdr" type="number" min="0" max="2147483647" step="1" defaultValue={Number(editingOffer?.payoutIdr ?? 0)} required /></label>
+            <label>Payout komisi per conversion (IDR)<input name="payoutIdr" type="number" min="1" max="2147483647" step="1" defaultValue={Number(editingOffer?.payoutIdr ?? 1)} required /></label>
             <button className="ad-button ad-button-primary" disabled={saveOffer.isPending} type="submit">{saveOffer.isPending ? "Menyimpan…" : "Simpan Draft"}</button>
           </form>
         </DialogContent>

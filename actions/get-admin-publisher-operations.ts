@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray, sum } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sum } from "drizzle-orm";
 import { defineAction, fail } from "@agent-native/core/action";
 import { z } from "zod";
 
@@ -49,6 +49,10 @@ export default defineAction({
             publisherName: schema.publisherProfiles.fullName,
             offerId: schema.publisherOfferApplications.offerId,
             offerName: schema.offers.name,
+            channelId: schema.publisherOfferApplications.channelId,
+            channelName: schema.publisherChannels.name,
+            channelUrl: schema.publisherChannels.url,
+            channelStatus: schema.publisherChannels.status,
             status: schema.publisherOfferApplications.status,
             createdAt: schema.publisherOfferApplications.createdAt,
           })
@@ -60,6 +64,13 @@ export default defineAction({
           .leftJoin(
             schema.offers,
             eq(schema.publisherOfferApplications.offerId, schema.offers.id),
+          )
+          .leftJoin(
+            schema.publisherChannels,
+            and(
+              eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+              eq(schema.publisherOfferApplications.publisherEmail, schema.publisherChannels.ownerEmail),
+            ),
           )
           .orderBy(desc(schema.publisherOfferApplications.createdAt)),
         db

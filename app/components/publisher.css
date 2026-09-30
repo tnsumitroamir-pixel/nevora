@@ -1017,6 +1017,24 @@
   cursor: pointer;
 }
 
+.publisher-apply-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.publisher-apply-controls select {
+  min-width: 130px;
+  min-height: 27px;
+  padding: 0 6px;
+  border: 1px solid #dce5ef;
+  border-radius: 5px;
+  color: #435771;
+  background: #fff;
+  font: inherit;
+  font-size: 8px;
+}
+
 .publisher-data-row button:disabled,
 .publisher-inline-form button:disabled,
 .publisher-support-form button:disabled {

@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { defineAction, fail } from "@agent-native/core/action";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -73,9 +73,23 @@ export default defineAction({
       } else if (input.recordType === "application") {
         await tx.execute(sql`SELECT id FROM publisher_offer_applications WHERE id = ${input.id} FOR UPDATE`);
         const [current] = await tx
-          .select({ status: schema.publisherOfferApplications.status, offerId: schema.publisherOfferApplications.offerId, publisherEmail: schema.publisherOfferApplications.publisherEmail, publisherStatus: schema.publisherProfiles.status })
+          .select({
+            status: schema.publisherOfferApplications.status,
+            offerId: schema.publisherOfferApplications.offerId,
+            publisherEmail: schema.publisherOfferApplications.publisherEmail,
+            publisherStatus: schema.publisherProfiles.status,
+            channelId: schema.publisherOfferApplications.channelId,
+            channelStatus: schema.publisherChannels.status,
+          })
           .from(schema.publisherOfferApplications)
           .innerJoin(schema.publisherProfiles, eq(schema.publisherOfferApplications.publisherEmail, schema.publisherProfiles.ownerEmail))
+          .leftJoin(
+            schema.publisherChannels,
+            and(
+              eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+              eq(schema.publisherOfferApplications.publisherEmail, schema.publisherChannels.ownerEmail),
+            ),
+          )
           .where(eq(schema.publisherOfferApplications.id, input.id))
           .limit(1);
         previousStatus = current?.status ?? "";
@@ -86,37 +100,128 @@ export default defineAction({
           fail("Publisher harus aktif sebelum pengajuan offer disetujui.", { statusCode: 409, errorCode: "publisher_not_active" });
         }
         if (input.status === "Approved") {
+          if (current.channelStatus !== "Active") {
+            fail("Channel publisher harus aktif dan dimiliki publisher sebelum pengajuan disetujui.", {
+              statusCode: 409,
+              errorCode: "publisher_channel_inactive",
+            });
+          }
           const [offer] = await tx
-            .select({ id: schema.offers.id, websiteUrl: schema.products.websiteUrl })
+            .select({ id: schema.offers.id, campaignId: schema.offers.campaignId, websiteUrl: schema.products.websiteUrl, advertiserStatus: schema.users.status })
             .from(schema.offers)
             .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
-            .where(and(eq(schema.offers.id, current.offerId), eq(schema.offers.status, "Active"), eq(schema.products.status, "Active")))
+            .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
+            .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
+            .where(and(
+              eq(schema.offers.id, current.offerId),
+              eq(schema.offers.status, "Active"),
+              eq(schema.products.status, "Active"),
+              or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
+            ))
             .limit(1);
-          if (!offer || !offer.websiteUrl) fail("Offer tidak lagi aktif atau belum memiliki tujuan.", { statusCode: 409, errorCode: "publisher_offer_inactive" });
+          if (!offer || !offer.websiteUrl || offer.advertiserStatus !== "active") {
+            fail("Offer atau advertiser tidak lagi aktif atau belum memiliki tujuan.", {
+              statusCode: 409,
+              errorCode: "publisher_offer_inactive",
+            });
+          }
         }
         await tx
           .update(schema.publisherOfferApplications)
           .set({ status: input.status, updatedAt: now })
           .where(and(eq(schema.publisherOfferApplications.id, input.id), eq(schema.publisherOfferApplications.status, "Pending")));
         if (input.status === "Approved") {
-          await tx.insert(schema.publisherTrackingLinks).values({
-            id: crypto.randomUUID(),
-            publisherEmail: current.publisherEmail,
-            offerId: current.offerId,
-            token: randomBytes(24).toString("base64url"),
-            createdAt: now,
-          });
+          const token = randomBytes(24).toString("base64url");
+          const [existingLink] = await tx
+            .select({ id: schema.publisherTrackingLinks.id })
+            .from(schema.publisherTrackingLinks)
+            .where(and(
+              eq(schema.publisherTrackingLinks.publisherEmail, current.publisherEmail),
+              eq(schema.publisherTrackingLinks.offerId, current.offerId),
+            ))
+            .limit(1);
+          if (existingLink) {
+            await tx
+              .update(schema.publisherTrackingLinks)
+              .set({ token, createdAt: now })
+              .where(eq(schema.publisherTrackingLinks.id, existingLink.id));
+          } else {
+            await tx.insert(schema.publisherTrackingLinks).values({
+              id: crypto.randomUUID(),
+              publisherEmail: current.publisherEmail,
+              offerId: current.offerId,
+              token,
+              createdAt: now,
+            });
+          }
         }
       } else if (input.recordType === "conversion") {
         await tx.execute(sql`SELECT id FROM publisher_conversions WHERE id = ${input.id} FOR UPDATE`);
         const [current] = await tx
-          .select({ status: schema.publisherConversions.status, publisherEmail: schema.publisherConversions.publisherEmail, offerId: schema.publisherConversions.offerId, payoutIdr: schema.publisherConversions.payoutIdr })
+          .select({ status: schema.publisherConversions.status, clickId: schema.publisherConversions.clickId, publisherEmail: schema.publisherConversions.publisherEmail, advertiserEmail: schema.publisherConversions.advertiserEmail, offerId: schema.publisherConversions.offerId, payoutIdr: schema.publisherConversions.payoutIdr })
           .from(schema.publisherConversions)
           .where(eq(schema.publisherConversions.id, input.id))
           .limit(1);
         previousStatus = current?.status ?? "";
         if (!current || previousStatus !== "Pending") {
           fail("Conversion tidak menunggu review.", { statusCode: 409, errorCode: "publisher_conversion_status_conflict" });
+        }
+        if (input.status === "Approved") {
+          const [eligible] = await tx
+            .select({ clickId: schema.publisherConversions.clickId })
+            .from(schema.publisherConversions)
+            .innerJoin(
+              schema.publisherClicks,
+              and(
+                eq(schema.publisherClicks.id, schema.publisherConversions.clickId),
+                eq(schema.publisherClicks.publisherEmail, schema.publisherConversions.publisherEmail),
+                eq(schema.publisherClicks.offerId, schema.publisherConversions.offerId),
+              ),
+            )
+            .innerJoin(
+              schema.publisherTrackingLinks,
+              and(
+                eq(schema.publisherClicks.trackingLinkId, schema.publisherTrackingLinks.id),
+                eq(schema.publisherTrackingLinks.publisherEmail, schema.publisherConversions.publisherEmail),
+                eq(schema.publisherTrackingLinks.offerId, schema.publisherConversions.offerId),
+              ),
+            )
+            .innerJoin(
+              schema.publisherOfferApplications,
+              and(
+                eq(schema.publisherOfferApplications.publisherEmail, schema.publisherConversions.publisherEmail),
+                eq(schema.publisherOfferApplications.offerId, schema.publisherConversions.offerId),
+                eq(schema.publisherOfferApplications.status, "Approved"),
+              ),
+            )
+            .innerJoin(
+              schema.publisherChannels,
+              and(
+                eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+                eq(schema.publisherChannels.ownerEmail, schema.publisherConversions.publisherEmail),
+                eq(schema.publisherChannels.status, "Active"),
+              ),
+            )
+            .innerJoin(schema.publisherProfiles, eq(schema.publisherProfiles.ownerEmail, schema.publisherConversions.publisherEmail))
+            .innerJoin(schema.offers, eq(schema.offers.id, schema.publisherConversions.offerId))
+            .innerJoin(schema.products, eq(schema.products.id, schema.offers.productId))
+            .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
+            .where(and(
+              eq(schema.publisherConversions.id, input.id),
+              eq(schema.publisherConversions.advertiserEmail, schema.offers.advertiserEmail),
+              eq(schema.publisherConversions.payoutIdr, schema.offers.payoutIdr),
+              eq(schema.publisherProfiles.status, "Active"),
+              eq(schema.offers.status, "Active"),
+              eq(schema.products.status, "Active"),
+              eq(schema.users.status, "active"),
+            ))
+            .limit(1);
+          if (!eligible) {
+            fail("Conversion tidak memenuhi syarat tracking, channel, advertiser, atau payout aktif.", {
+              statusCode: 409,
+              errorCode: "publisher_conversion_not_eligible",
+            });
+          }
         }
         await tx
           .update(schema.publisherConversions)

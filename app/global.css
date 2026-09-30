@@ -3538,9 +3538,11 @@
   letter-spacing: -0.035em;
 }
 .ad-catalog-heading p {
+  max-width: 720px;
   margin: 0;
   color: #7a8799;
   font-size: 9px;
+  line-height: 1.55;
 }
 .ad-catalog-tabs {
   display: flex;

@@ -28,7 +28,7 @@ export default defineAction({
 
     if (itemType === "product") {
       const [current] = await db
-        .select({ status: schema.products.status })
+        .select({ status: schema.products.status, advertiserEmail: schema.products.advertiserEmail, websiteUrl: schema.products.websiteUrl, category: schema.products.category })
         .from(schema.products)
         .where(eq(schema.products.id, itemId))
         .limit(1);
@@ -37,6 +37,26 @@ export default defineAction({
           statusCode: 409,
           errorCode: "product_review_not_pending",
         });
+      }
+      if (decision === "approve" && (!current.websiteUrl || !current.category)) {
+        fail("Produk harus memiliki website tujuan dan kategori sebelum disetujui.", {
+          statusCode: 409,
+          errorCode: "product_supply_incomplete",
+        });
+      }
+
+      if (decision === "approve") {
+        const [owner] = await db
+          .select({ status: schema.users.status })
+          .from(schema.users)
+          .where(eq(schema.users.email, current.advertiserEmail))
+          .limit(1);
+        if (owner?.status !== "active") {
+          fail("Advertiser harus aktif sebelum produknya disetujui.", {
+            statusCode: 409,
+            errorCode: "advertiser_not_active",
+          });
+        }
       }
 
       await db.transaction(async (tx) => {
@@ -78,6 +98,8 @@ export default defineAction({
           status: schema.offers.status,
           advertiserEmail: schema.offers.advertiserEmail,
           productId: schema.offers.productId,
+          payoutIdr: schema.offers.payoutIdr,
+          campaignId: schema.offers.campaignId,
         })
         .from(schema.offers)
         .where(eq(schema.offers.id, itemId))
@@ -89,15 +111,32 @@ export default defineAction({
         });
       }
 
+      if (current.campaignId) {
+        fail("Campaign offer harus ditinjau bersama campaign.", {
+          statusCode: 409,
+          errorCode: "campaign_offer_review_required",
+        });
+      }
       if (decision === "approve") {
-        if (!current.productId) {
-          fail("Offer harus ditautkan ke produk sebelum dapat disetujui.", {
+        const [owner] = await db
+          .select({ status: schema.users.status })
+          .from(schema.users)
+          .where(eq(schema.users.email, current.advertiserEmail))
+          .limit(1);
+        if (owner?.status !== "active") {
+          fail("Advertiser harus aktif sebelum offer-nya disetujui.", {
+            statusCode: 409,
+            errorCode: "advertiser_not_active",
+          });
+        }
+        if (!current.productId || Number(current.payoutIdr) < 1) {
+          fail("Offer harus ditautkan ke produk dan memiliki payout positif sebelum dapat disetujui.", {
             statusCode: 409,
             errorCode: "offer_product_required",
           });
         }
         const [product] = await db
-          .select({ status: schema.products.status, websiteUrl: schema.products.websiteUrl })
+          .select({ status: schema.products.status, websiteUrl: schema.products.websiteUrl, category: schema.products.category })
           .from(schema.products)
           .where(
             and(
@@ -106,7 +145,7 @@ export default defineAction({
             ),
           )
           .limit(1);
-        if (!product || product.status !== "Active" || !product.websiteUrl) {
+        if (!product || product.status !== "Active" || !product.websiteUrl || !product.category) {
           fail("The linked product must be active before this offer can be approved.", {
             statusCode: 409,
             errorCode: "offer_product_not_active",
