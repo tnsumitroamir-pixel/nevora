@@ -10,14 +10,14 @@ import {
 } from "../server/lib/publisher-dashboard.js";
 
 export default defineAction({
-  description: "Apply to an active advertiser offer and create a real tracking link.",
+  description: "Apply to an active advertiser offer.",
   schema: z.object({ offerId: z.string().uuid() }),
   run: async ({ offerId }, ctx) => {
     const publisherEmail = requirePublisherEmail(ctx?.userEmail);
     await requirePublisherProfile(publisherEmail);
     const db = await getDb();
     const [offer] = await db
-      .select({ id: schema.offers.id })
+      .select({ id: schema.offers.id, websiteUrl: schema.products.websiteUrl })
       .from(schema.offers)
       .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
       .where(
@@ -28,7 +28,7 @@ export default defineAction({
         ),
       )
       .limit(1);
-    if (!offer) {
+    if (!offer || !offer.websiteUrl) {
       fail("Offer aktif tidak ditemukan.", {
         statusCode: 404,
         errorCode: "publisher_offer_not_found",

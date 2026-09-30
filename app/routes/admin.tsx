@@ -72,13 +72,6 @@ const metrics = [
     tone: "cyan",
   },
   {
-    label: "Total Publisher",
-    value: "1.892",
-    change: "15,7%",
-    icon: IconUserCheck,
-    tone: "green",
-  },
-  {
     label: "Total Campaign",
     value: "3.421",
     change: "21,4%",
@@ -189,44 +182,6 @@ const advertisers = [
   },
 ];
 
-const publishers = [
-  {
-    name: "Budi Santoso",
-    email: "budi@publisher.id",
-    channel: "Website & YouTube",
-    status: "Aktif",
-    campaigns: "18 campaign",
-  },
-  {
-    name: "Santi Rahma",
-    email: "santi@creator.id",
-    channel: "Instagram",
-    status: "Aktif",
-    campaigns: "12 campaign",
-  },
-  {
-    name: "Dimas Pratama",
-    email: "dimas@media.id",
-    channel: "Website",
-    status: "Review",
-    campaigns: "5 campaign",
-  },
-  {
-    name: "Nadia Putri",
-    email: "nadia@social.id",
-    channel: "TikTok & Instagram",
-    status: "Aktif",
-    campaigns: "9 campaign",
-  },
-  {
-    name: "Arif Nugraha",
-    email: "arif@publisher.id",
-    channel: "YouTube",
-    status: "Aktif",
-    campaigns: "7 campaign",
-  },
-];
-
 const recentActivity = [
   {
     title: "Campaign baru dibuat",
@@ -234,13 +189,6 @@ const recentActivity = [
     time: "14:32",
     tone: "green",
     icon: IconCircleCheck,
-  },
-  {
-    title: "Publisher terdaftar",
-    detail: "Budi Santoso",
-    time: "13:45",
-    tone: "violet",
-    icon: IconUser,
   },
   {
     title: "Konversi masuk",
@@ -255,13 +203,6 @@ const recentActivity = [
     time: "11:10",
     tone: "green",
     icon: IconWallet,
-  },
-  {
-    title: "Pembayaran disetujui",
-    detail: "Rp 2.000.000 · Budi Santoso",
-    time: "10:55",
-    tone: "blue",
-    icon: IconCircleCheck,
   },
 ];
 
@@ -344,7 +285,7 @@ function AdminAccountTable({
   search: string;
   onManage: (name: string) => void;
 }) {
-  const rows: AdminAccountRow[] = list === "advertisers" ? advertisers : publishers;
+  const rows: AdminAccountRow[] = list === "advertisers" ? advertisers : [];
   const query = search.trim().toLocaleLowerCase("id-ID");
   const filteredRows = rows.filter((row) =>
     `${row.name} ${row.email} ${row.segment ?? row.channel}`

@@ -37,9 +37,15 @@ export default defineAction({
       });
     }
 
-    if (current.productId) {
+    if (!current.productId) {
+      fail("Offer harus ditautkan ke produk sebelum diajukan untuk review.", {
+        statusCode: 409,
+        errorCode: "offer_product_required",
+      });
+    }
+    {
       const [product] = await db
-        .select({ status: schema.products.status })
+        .select({ status: schema.products.status, websiteUrl: schema.products.websiteUrl })
         .from(schema.products)
         .where(
           and(
@@ -48,7 +54,7 @@ export default defineAction({
           ),
         )
         .limit(1);
-      if (!product || product.status !== "Active") {
+      if (!product || product.status !== "Active" || !product.websiteUrl) {
         fail("The linked product must be active before this offer can be submitted.", {
           statusCode: 409,
           errorCode: "offer_product_not_active",

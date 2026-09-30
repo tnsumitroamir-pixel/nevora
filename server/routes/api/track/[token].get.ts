@@ -48,6 +48,10 @@ export default defineEventHandler(async (event) => {
     return { error: "Tautan tracking tidak aktif." };
   }
 
+  if (!link.websiteUrl) {
+    setResponseStatus(event, 404);
+    return { error: "Tujuan offer tidak tersedia." };
+  }
   const destination = new URL(link.websiteUrl);
   if (!['http:', 'https:'].includes(destination.protocol) || destination.username || destination.password) {
     setResponseStatus(event, 404);

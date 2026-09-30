@@ -87,12 +87,12 @@ export default defineAction({
         }
         if (input.status === "Approved") {
           const [offer] = await tx
-            .select({ id: schema.offers.id })
+            .select({ id: schema.offers.id, websiteUrl: schema.products.websiteUrl })
             .from(schema.offers)
             .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
             .where(and(eq(schema.offers.id, current.offerId), eq(schema.offers.status, "Active"), eq(schema.products.status, "Active")))
             .limit(1);
-          if (!offer) fail("Offer tidak lagi aktif.", { statusCode: 409, errorCode: "publisher_offer_inactive" });
+          if (!offer || !offer.websiteUrl) fail("Offer tidak lagi aktif atau belum memiliki tujuan.", { statusCode: 409, errorCode: "publisher_offer_inactive" });
         }
         await tx
           .update(schema.publisherOfferApplications)
@@ -159,7 +159,7 @@ export default defineAction({
       } else {
         await tx.execute(sql`SELECT id FROM publisher_support_tickets WHERE id = ${input.id} FOR UPDATE`);
         const [current] = await tx
-          .select({ status: schema.publisherSupportTickets.status })
+          .select({ status: schema.publisherSupportTickets.status, adminResponse: schema.publisherSupportTickets.adminResponse })
           .from(schema.publisherSupportTickets)
           .where(eq(schema.publisherSupportTickets.id, input.id))
           .limit(1);
@@ -169,7 +169,7 @@ export default defineAction({
         }
         await tx
           .update(schema.publisherSupportTickets)
-          .set({ status: input.status, adminResponse: input.adminResponse ?? "", reviewedBy: admin.email, updatedAt: now })
+          .set({ status: input.status, adminResponse: input.adminResponse ?? current.adminResponse, reviewedBy: admin.email, updatedAt: now })
           .where(and(eq(schema.publisherSupportTickets.id, input.id), eq(schema.publisherSupportTickets.status, previousStatus)));
       }
 

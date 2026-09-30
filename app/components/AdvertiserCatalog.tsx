@@ -76,7 +76,7 @@ export function AdvertiserCatalog({
     try {
       await saveOffer.mutateAsync({
         ...(editingOffer ? { id: String(editingOffer.id) } : {}),
-        productId: String(values.get("productId") || "") || null,
+        productId: String(values.get("productId") || ""),
         name: String(values.get("name") || "").trim(),
         payoutIdr: Number(values.get("payoutIdr")),
       });
@@ -271,8 +271,7 @@ export function AdvertiserCatalog({
           <form className="ad-campaign-form" key={String(editingOffer?.id ?? "new-offer")} onSubmit={handleSaveOffer}>
             <label>Nama offer<input name="name" defaultValue={String(editingOffer?.name ?? "")} maxLength={160} required /></label>
             <label>Produk
-              <select name="productId" defaultValue={String(editingOffer?.productId ?? "")}>
-                <option value="">Tidak ditautkan</option>
+              <select name="productId" defaultValue={String(editingOffer?.productId ?? "")} required>
                 {products.filter((product) => product.status === "Active").map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </select>
             </label>

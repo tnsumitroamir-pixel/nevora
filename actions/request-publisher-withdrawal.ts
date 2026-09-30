@@ -33,6 +33,17 @@ export default defineAction({
       await tx.execute(
         sql`SELECT owner_email FROM publisher_profiles WHERE owner_email = ${publisherEmail} FOR UPDATE`,
       );
+      const [profile] = await tx
+        .select({ status: schema.publisherProfiles.status })
+        .from(schema.publisherProfiles)
+        .where(eq(schema.publisherProfiles.ownerEmail, publisherEmail))
+        .limit(1);
+      if (!profile || profile.status !== "Active") {
+        fail("Akun Publisher tidak aktif.", {
+          statusCode: 403,
+          errorCode: "publisher_approval_required",
+        });
+      }
       const [earnings] = await tx
         .select({ amountIdr: sum(schema.publisherEarningEntries.amountIdr) })
         .from(schema.publisherEarningEntries)
