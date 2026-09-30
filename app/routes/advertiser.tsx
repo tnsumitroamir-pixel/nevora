@@ -31,6 +31,7 @@ import {
 import { useState, type FormEvent } from "react";
 
 import { AdvertiserCatalog } from "@/components/AdvertiserCatalog";
+import { AdvertiserPublisherConversions } from "@/components/AdvertiserPublisherConversions";
 import {
   RoleNavigation,
   type RoleNavigationSection,
@@ -387,6 +388,7 @@ export default function AdvertiserDashboardRoute() {
   const [catalogTab, setCatalogTab] = useState<"products" | "offers" | null>(null);
   const [catalogCreate, setCatalogCreate] = useState<"product" | null>(null);
   const [campaignStatusFilter, setCampaignStatusFilter] = useState("all");
+  const [publisherConversionView, setPublisherConversionView] = useState(false);
 
   if (session.status === "loading" || session.status === "signing-out") {
     return <DashboardLoading />;
@@ -589,12 +591,12 @@ export default function AdvertiserDashboardRoute() {
       label: "Tracking",
       icon: IconTargetArrow,
       items: [
-        "Click",
-        "Conversion",
-        "Attribution",
-        "Postback",
-        "Tracking Test",
-      ].map((label) => ({ label, href: "#performance" })),
+        { label: "Click", href: "#performance" },
+        { label: "Conversion", onSelect: () => setPublisherConversionView(true) },
+        { label: "Attribution", href: "#performance" },
+        { label: "Postback", href: "#performance" },
+        { label: "Tracking Test", href: "#performance" },
+      ],
     },
     {
       id: "analytics",
@@ -708,7 +710,9 @@ export default function AdvertiserDashboardRoute() {
           </div>
         </header>
 
-        {catalogTab ? (
+        {publisherConversionView ? (
+          <AdvertiserPublisherConversions onBack={() => setPublisherConversionView(false)} />
+        ) : catalogTab ? (
           <AdvertiserCatalog
             initialTab={catalogTab}
             startWithCreate={catalogCreate}

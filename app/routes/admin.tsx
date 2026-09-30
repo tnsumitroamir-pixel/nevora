@@ -39,6 +39,10 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminCatalogReview } from "@/components/AdminCatalogReview";
+import {
+  AdminPublisherManagement,
+  type AdminPublisherTab,
+} from "@/components/AdminPublisherManagement";
 
 import "../components/admin.css";
 
@@ -483,6 +487,8 @@ function AdminDashboard() {
   const [managedAccount, setManagedAccount] = useState("");
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [catalogReviewOpen, setCatalogReviewOpen] = useState(false);
+  const [publisherManagementTab, setPublisherManagementTab] =
+    useState<AdminPublisherTab | null>(null);
 
   const visibleCampaigns = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("id-ID");
@@ -499,6 +505,24 @@ function AdminDashboard() {
 
   const showList = (list: AdminList) => {
     setActiveList(list);
+    setManagedAccount("");
+  };
+
+  const openPublisherManagement = (label: string) => {
+    const lowerLabel = label.toLocaleLowerCase("id-ID");
+    const tab: AdminPublisherTab = lowerLabel.includes("channel")
+      ? "channels"
+      : lowerLabel.includes("application") || lowerLabel.includes("pengajuan")
+        ? "applications"
+        : lowerLabel.includes("performance") || lowerLabel.includes("performa")
+          ? "performance"
+          : lowerLabel.includes("payout") || lowerLabel.includes("penarikan")
+            ? "withdrawals"
+            : lowerLabel.includes("conversion") || lowerLabel.includes("tracking")
+              ? "conversions"
+              : "publishers";
+    setPublisherManagementTab(tab);
+    setCatalogReviewOpen(false);
     setManagedAccount("");
   };
 
@@ -548,9 +572,16 @@ function AdminDashboard() {
               "Banned",
             ].map((label) => (
               <a
-                href="#admin-accounts"
+                href={label === "Publisher" ? "#publisher-control" : "#admin-accounts"}
                 key={label}
-                onClick={() => showList(label === "Advertiser" ? "advertisers" : "publishers")}
+                onClick={(event) => {
+                  if (label === "Publisher") {
+                    event.preventDefault();
+                    openPublisherManagement("publishers");
+                  } else {
+                    showList(label === "Advertiser" ? "advertisers" : "publishers");
+                  }
+                }}
               >
                 {label}
               </a>
@@ -570,11 +601,16 @@ function AdminDashboard() {
               "Verification Queue",
             ].map((label) => (
               <a
-                href="#admin-accounts"
+                href={label.includes("Publisher") ? "#publisher-control" : "#admin-accounts"}
                 key={label}
-                onClick={() =>
-                  showList(label.includes("Advertiser") ? "advertisers" : "publishers")
-                }
+                onClick={(event) => {
+                  if (label.includes("Publisher")) {
+                    event.preventDefault();
+                    openPublisherManagement("publishers");
+                  } else {
+                    showList(label.includes("Advertiser") ? "advertisers" : "publishers");
+                  }
+                }}
               >
                 {label}
               </a>
@@ -625,7 +661,7 @@ function AdminDashboard() {
           <AdminNavGroup
             icon={IconUserCheck}
             label="Publisher Network"
-            active={activeList === "publishers"}
+            active={activeList === "publishers" || publisherManagementTab !== null}
             open={openMenu === "publisherNetwork"}
             onToggle={() => toggleMenu("publisherNetwork")}
           >
@@ -637,7 +673,7 @@ function AdminDashboard() {
               "Publisher Payout",
               "Publisher Restrictions",
             ].map((label) => (
-              <a href="#admin-accounts" key={label} onClick={() => showList("publishers")}>
+              <a href="#publisher-control" key={label} onClick={(event) => { event.preventDefault(); openPublisherManagement(label); }}>
                 {label}
               </a>
             ))}
@@ -927,7 +963,13 @@ function AdminDashboard() {
           </div>
         </header>
 
-        {catalogReviewOpen ? (
+        {publisherManagementTab ? (
+          <AdminPublisherManagement
+            key={publisherManagementTab}
+            initialTab={publisherManagementTab}
+            onBack={() => setPublisherManagementTab(null)}
+          />
+        ) : catalogReviewOpen ? (
           <AdminCatalogReview onBack={() => setCatalogReviewOpen(false)} />
         ) : (
           <div className="admin-content-grid">
@@ -1217,17 +1259,14 @@ function AdminDashboard() {
                 <IconChevronRight size={13} />
               </button>
               <button
-                onClick={() => {
-                  showList("publishers");
-                  setManagedAccount("Tambah publisher · pratinjau");
-                }}
+                onClick={() => openPublisherManagement("publishers")}
                 type="button"
               >
                 <span>
                   <IconUserCheck size={15} />
                 </span>
                 <b>
-                  Tambah Publisher<small>Daftarkan publisher baru</small>
+                  Kelola Publisher<small>Review akun, offer, dan penarikan</small>
                 </b>
                 <IconChevronRight size={13} />
               </button>
