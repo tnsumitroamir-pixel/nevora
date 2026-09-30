@@ -29,12 +29,15 @@ type Pages = {
   "/admin": {
     params: {};
   };
+  "/user": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/admin-login" | "/advertiser" | "/publisher" | "/install" | "/admin";
+    page: "/" | "/admin-login" | "/advertiser" | "/publisher" | "/install" | "/admin" | "/user";
   };
   "routes/admin-login.tsx": {
     id: "routes/admin-login";
@@ -60,6 +63,10 @@ type RouteFiles = {
     id: "routes/admin";
     page: "/admin";
   };
+  "routes/user.tsx": {
+    id: "routes/user";
+    page: "/user";
+  };
 };
 
 type RouteModules = {
@@ -70,4 +77,5 @@ type RouteModules = {
   "routes/install": typeof import("./app/routes/install.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");
   "routes/admin": typeof import("./app/routes/admin.tsx");
+  "routes/user": typeof import("./app/routes/user.tsx");
 };
