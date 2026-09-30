@@ -18,7 +18,11 @@ export default defineAction({
     await requireAdvertiserProfile(ownerEmail);
     const db = await getDb();
     const [current] = await db
-      .select({ status: schema.products.status })
+      .select({
+        status: schema.products.status,
+        websiteUrl: schema.products.websiteUrl,
+        category: schema.products.category,
+      })
       .from(schema.products)
       .where(
         and(
@@ -30,6 +34,12 @@ export default defineAction({
 
     if (!current) {
       fail("Product not found.", { statusCode: 404, errorCode: "product_not_found" });
+    }
+    if (!current.websiteUrl || !current.category) {
+      fail("Produk harus memiliki website tujuan dan kategori sebelum diajukan.", {
+        statusCode: 409,
+        errorCode: "product_supply_incomplete",
+      });
     }
     if (current.status !== "Draft" && current.status !== "Rejected") {
       fail("Product is not ready for review.", {

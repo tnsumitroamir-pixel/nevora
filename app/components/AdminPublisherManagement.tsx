@@ -135,7 +135,7 @@ export function AdminPublisherManagement({ onBack, initialTab = "publishers" }: 
               <h2>Pengajuan Offer ({data.applications.length})</h2>
               {data.applications.length === 0 ? <p>Belum ada pengajuan offer.</p> : data.applications.map((application) => (
                 <article className="publisher-admin-row" key={application.id}>
-                  <div><b>{application.offerName ?? "Offer sudah tidak tersedia"}</b><small>{application.publisherName ?? application.publisherEmail} · {application.publisherEmail}</small></div>
+                  <div><b>{application.offerName ?? "Offer sudah tidak tersedia"}</b><small>{application.publisherName ?? application.publisherEmail} · {application.publisherEmail}</small><small>{application.channelName ?? "Channel belum tercatat"} · {application.channelStatus ?? "belum diverifikasi"}</small></div>
                   <Status value={application.status} />
                   {application.status === "Pending" && <div className="publisher-admin-actions">
                     <button disabled={manage.isPending} onClick={() => void runMutation({ recordType: "application", id: application.id, status: "Approved" })} type="button">Setujui</button>

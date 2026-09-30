@@ -27,7 +27,7 @@ export function AdvertiserPublisherConversions({ onBack }: { onBack: () => void 
   return (
     <div className="admin-catalog-page">
       <div className="admin-panel-heading admin-catalog-heading">
-        <div><h1>Conversion Publisher</h1><p>Catat conversion hanya dengan ID event transaksi yang benar-benar terjadi.</p></div>
+        <div><h1>Klik &amp; Conversion Publisher</h1><p>Data klik berasal dari tracking channel aktif. Catat conversion hanya dengan ID event transaksi yang benar-benar terjadi.</p></div>
         <button className="admin-catalog-back" onClick={onBack} type="button">Kembali</button>
       </div>
       {notice && <p className="admin-catalog-notice" role="status">{notice}</p>}

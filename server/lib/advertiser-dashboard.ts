@@ -21,12 +21,14 @@ export async function requireAdvertiserProfile(ownerEmail: string) {
       fullName: schema.advertiserProfiles.fullName,
       businessName: schema.advertiserProfiles.businessName,
       role: schema.advertiserProfiles.role,
+      status: schema.users.status,
     })
     .from(schema.advertiserProfiles)
+    .leftJoin(schema.users, eq(schema.users.email, schema.advertiserProfiles.ownerEmail))
     .where(eq(schema.advertiserProfiles.ownerEmail, ownerEmail))
     .limit(1);
 
-  if (!profile || profile.role !== "Advertiser") {
+  if (!profile || profile.role !== "Advertiser" || profile.status !== "active") {
     fail("This dashboard is available to advertiser accounts.", {
       statusCode: 403,
       errorCode: "advertiser_access_required",
@@ -47,16 +49,19 @@ export async function getAdvertiserDashboard(ownerEmail: string) {
       fullName: schema.advertiserProfiles.fullName,
       businessName: schema.advertiserProfiles.businessName,
       role: schema.advertiserProfiles.role,
+      status: schema.users.status,
     })
     .from(schema.advertiserProfiles)
+    .leftJoin(schema.users, eq(schema.users.email, schema.advertiserProfiles.ownerEmail))
     .where(eq(schema.advertiserProfiles.ownerEmail, ownerEmail))
     .limit(1);
 
-  if (profile?.role !== "Advertiser") {
+  if (profile?.role !== "Advertiser" || profile.status !== "active") {
     return {
       profile: profile ?? null,
       summary: null,
       walletBalanceIdr: null,
+      activeProducts: [],
       dailyPerformance: [],
       campaigns: [],
       periodStart: null,
@@ -82,6 +87,7 @@ export async function getAdvertiserDashboard(ownerEmail: string) {
     periodCampaignRows,
     campaignSpendRows,
     campaigns,
+    activeProducts,
   ] = await Promise.all([
     db
       .select({
@@ -144,6 +150,8 @@ export async function getAdvertiserDashboard(ownerEmail: string) {
         name: schema.advertiserCampaigns.name,
         objective: schema.advertiserCampaigns.objective,
         budgetIdr: schema.advertiserCampaigns.budgetIdr,
+        productId: schema.advertiserCampaigns.productId,
+        payoutIdr: schema.advertiserCampaigns.payoutIdr,
         status: schema.advertiserCampaigns.status,
         createdAt: schema.advertiserCampaigns.createdAt,
       })
@@ -151,6 +159,11 @@ export async function getAdvertiserDashboard(ownerEmail: string) {
       .where(eq(schema.advertiserCampaigns.ownerEmail, ownerEmail))
       .orderBy(desc(schema.advertiserCampaigns.createdAt))
       .limit(8),
+    db
+      .select({ id: schema.products.id, name: schema.products.name })
+      .from(schema.products)
+      .where(and(eq(schema.products.advertiserEmail, ownerEmail), eq(schema.products.status, "Active")))
+      .orderBy(asc(schema.products.name)),
   ]);
 
   const allocatedBudgetIdr = numeric(budgetTotals[0]?.budgetIdr);
@@ -185,6 +198,7 @@ export async function getAdvertiserDashboard(ownerEmail: string) {
     walletBalanceIdr:
       walletRows[0] === undefined ? null : Number(walletRows[0].balanceIdr),
     dailyPerformance: periodMetrics,
+    activeProducts,
     campaigns: campaigns.map((campaign) => {
       const period = periodCampaigns.get(campaign.id);
       const spentIdr = campaignSpend.get(campaign.id) ?? 0;

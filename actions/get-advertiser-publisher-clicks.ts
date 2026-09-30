@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
@@ -29,9 +29,27 @@ export default defineAction({
       .from(schema.publisherClicks)
       .innerJoin(schema.offers, eq(schema.publisherClicks.offerId, schema.offers.id))
       .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
+      .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
+      .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
       .innerJoin(
         schema.publisherProfiles,
         eq(schema.publisherClicks.publisherEmail, schema.publisherProfiles.ownerEmail),
+      )
+      .innerJoin(
+        schema.publisherOfferApplications,
+        and(
+          eq(schema.publisherOfferApplications.publisherEmail, schema.publisherClicks.publisherEmail),
+          eq(schema.publisherOfferApplications.offerId, schema.publisherClicks.offerId),
+          eq(schema.publisherOfferApplications.status, "Approved"),
+        ),
+      )
+      .innerJoin(
+        schema.publisherChannels,
+        and(
+          eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+          eq(schema.publisherChannels.ownerEmail, schema.publisherClicks.publisherEmail),
+          eq(schema.publisherChannels.status, "Active"),
+        ),
       )
       .leftJoin(
         schema.publisherConversions,
@@ -43,6 +61,8 @@ export default defineAction({
           eq(schema.offers.status, "Active"),
           eq(schema.products.status, "Active"),
           eq(schema.publisherProfiles.status, "Active"),
+          eq(schema.users.status, "active"),
+          or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
           isNull(schema.publisherConversions.id),
         ),
       )

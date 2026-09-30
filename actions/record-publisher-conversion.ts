@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { defineAction, fail } from "@agent-native/core/action";
 import { z } from "zod";
 
@@ -29,6 +29,7 @@ export default defineAction({
       .from(schema.publisherClicks)
       .innerJoin(schema.offers, eq(schema.publisherClicks.offerId, schema.offers.id))
       .innerJoin(schema.products, eq(schema.offers.productId, schema.products.id))
+      .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
       .innerJoin(
         schema.publisherOfferApplications,
         and(
@@ -37,12 +38,21 @@ export default defineAction({
           eq(schema.publisherOfferApplications.status, "Approved"),
         ),
       )
+      .innerJoin(
+        schema.publisherChannels,
+        and(
+          eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+          eq(schema.publisherChannels.ownerEmail, schema.publisherClicks.publisherEmail),
+          eq(schema.publisherChannels.status, "Active"),
+        ),
+      )
       .where(
         and(
           eq(schema.publisherClicks.id, clickId),
           eq(schema.offers.advertiserEmail, advertiserEmail),
           eq(schema.offers.status, "Active"),
           eq(schema.products.status, "Active"),
+          or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
         ),
       )
       .limit(1);

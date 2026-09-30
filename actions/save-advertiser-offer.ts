@@ -15,7 +15,7 @@ export default defineAction({
     id: z.string().uuid().optional(),
     productId: z.string().uuid(),
     name: z.string().trim().min(1).max(160),
-    payoutIdr: z.number().int().min(0).max(2_147_483_647),
+    payoutIdr: z.number().int().min(1).max(2_147_483_647),
   }),
   run: async ({ id, productId, name, payoutIdr }, ctx) => {
     const ownerEmail = requireUserEmail(ctx?.userEmail);
@@ -44,7 +44,7 @@ export default defineAction({
     const now = mysqlNow();
     if (id) {
       const [current] = await db
-        .select({ status: schema.offers.status })
+        .select({ status: schema.offers.status, campaignId: schema.offers.campaignId })
         .from(schema.offers)
         .where(
           and(
@@ -55,6 +55,12 @@ export default defineAction({
         .limit(1);
       if (!current) {
         fail("Offer not found.", { statusCode: 404, errorCode: "offer_not_found" });
+      }
+      if (current.campaignId) {
+        fail("Offer campaign dikelola dari campaign terkait.", {
+          statusCode: 409,
+          errorCode: "campaign_offer_managed",
+        });
       }
       if (current.status !== "Draft" && current.status !== "Rejected") {
         fail("Only draft or rejected offers can be edited.", {

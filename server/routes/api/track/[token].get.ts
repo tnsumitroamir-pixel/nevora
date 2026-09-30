@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { defineEventHandler, getRouterParam, sendRedirect, setResponseStatus } from "h3";
 
 import { getDb, schema } from "../../../db.js";
@@ -26,6 +26,8 @@ export default defineEventHandler(async (event) => {
       schema.publisherProfiles,
       eq(schema.publisherTrackingLinks.publisherEmail, schema.publisherProfiles.ownerEmail),
     )
+    .innerJoin(schema.users, eq(schema.users.email, schema.offers.advertiserEmail))
+    .leftJoin(schema.advertiserCampaigns, eq(schema.offers.campaignId, schema.advertiserCampaigns.id))
     .innerJoin(
       schema.publisherOfferApplications,
       and(
@@ -33,13 +35,23 @@ export default defineEventHandler(async (event) => {
         eq(schema.publisherOfferApplications.publisherEmail, schema.publisherTrackingLinks.publisherEmail),
       ),
     )
+    .innerJoin(
+      schema.publisherChannels,
+      and(
+        eq(schema.publisherOfferApplications.channelId, schema.publisherChannels.id),
+        eq(schema.publisherOfferApplications.publisherEmail, schema.publisherChannels.ownerEmail),
+      ),
+    )
     .where(
       and(
         eq(schema.publisherTrackingLinks.token, token),
         eq(schema.offers.status, "Active"),
         eq(schema.products.status, "Active"),
+        eq(schema.users.status, "active"),
         eq(schema.publisherProfiles.status, "Active"),
+        eq(schema.publisherChannels.status, "Active"),
         eq(schema.publisherOfferApplications.status, "Approved"),
+        or(isNull(schema.offers.campaignId), eq(schema.advertiserCampaigns.status, "Active")),
       ),
     )
     .limit(1);

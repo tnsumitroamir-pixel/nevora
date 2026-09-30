@@ -65,6 +65,8 @@ export const advertiserCampaigns = mysqlTable(
     name: varchar("name", { length: 120 }).notNull(),
     objective: varchar("objective", { length: 24 }).notNull(),
     budgetIdr: int("budget_idr").notNull(),
+    productId: varchar("product_id", { length: 36 }).notNull().default(""),
+    payoutIdr: int("payout_idr").notNull().default(0),
     status: varchar("status", { length: 32 }).notNull().default("Draft"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -123,6 +125,7 @@ export const offers = mysqlTable(
   {
     id: varchar("id", { length: 36 }).primaryKey(),
     advertiserEmail: varchar("advertiser_email", { length: 320 }).notNull(),
+    campaignId: varchar("campaign_id", { length: 36 }),
     productId: varchar("product_id", { length: 36 }),
     name: varchar("name", { length: 160 }).notNull(),
     payoutIdr: int("payout_idr").notNull().default(0),
@@ -132,6 +135,7 @@ export const offers = mysqlTable(
   },
   (table) => ({
     advertiserIndex: index("offers_advertiser_idx").on(table.advertiserEmail),
+    campaignUnique: uniqueIndex("offers_campaign_uidx").on(table.campaignId),
     productIndex: index("offers_product_idx").on(table.productId),
   }),
 );
@@ -168,6 +172,7 @@ export const publisherOfferApplications = mysqlTable(
     id: varchar("id", { length: 36 }).primaryKey(),
     publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
     offerId: varchar("offer_id", { length: 36 }).notNull(),
+    channelId: varchar("channel_id", { length: 36 }).notNull().default(""),
     status: varchar("status", { length: 32 }).notNull().default("Pending"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

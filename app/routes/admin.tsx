@@ -40,6 +40,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminCatalogReview } from "@/components/AdminCatalogReview";
 import {
+  AdminAdvertiserManagement,
+  type AdminAdvertiserTab,
+} from "@/components/AdminAdvertiserManagement";
+import {
   AdminPublisherManagement,
   type AdminPublisherTab,
 } from "@/components/AdminPublisherManagement";
@@ -428,6 +432,8 @@ function AdminDashboard() {
   const [managedAccount, setManagedAccount] = useState("");
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [catalogReviewOpen, setCatalogReviewOpen] = useState(false);
+  const [advertiserManagementTab, setAdvertiserManagementTab] =
+    useState<AdminAdvertiserTab | null>("accounts");
   const [publisherManagementTab, setPublisherManagementTab] =
     useState<AdminPublisherTab | null>(null);
 
@@ -446,6 +452,9 @@ function AdminDashboard() {
 
   const showList = (list: AdminList) => {
     setActiveList(list);
+    setAdvertiserManagementTab(null);
+    setPublisherManagementTab(null);
+    setCatalogReviewOpen(false);
     setManagedAccount("");
   };
 
@@ -463,8 +472,27 @@ function AdminDashboard() {
               ? "conversions"
               : "publishers";
     setPublisherManagementTab(tab);
+    setAdvertiserManagementTab(null);
     setCatalogReviewOpen(false);
     setManagedAccount("");
+  };
+
+  const openAdvertiserManagement = (label: string) => {
+    const lowerLabel = label.toLocaleLowerCase("id-ID");
+    const tab: AdminAdvertiserTab = lowerLabel.includes("application") || lowerLabel.includes("verification")
+      ? "applications"
+      : lowerLabel.includes("campaign")
+        ? "campaigns"
+        : lowerLabel.includes("billing")
+          ? "billing"
+          : lowerLabel.includes("restriction") || lowerLabel.includes("suspend")
+            ? "restrictions"
+            : lowerLabel.includes("audit")
+              ? "audit"
+              : "accounts";
+    setAdvertiserManagementTab(tab);
+    setPublisherManagementTab(null);
+    setCatalogReviewOpen(false);
   };
 
   const activities = showAllActivities ? recentActivity : recentActivity.slice(0, 4);
@@ -519,8 +547,11 @@ function AdminDashboard() {
                   if (label === "Publisher") {
                     event.preventDefault();
                     openPublisherManagement("publishers");
+                  } else if (label === "Advertiser") {
+                    event.preventDefault();
+                    openAdvertiserManagement("Advertiser");
                   } else {
-                    showList(label === "Advertiser" ? "advertisers" : "publishers");
+                    showList("publishers");
                   }
                 }}
               >
@@ -548,8 +579,11 @@ function AdminDashboard() {
                   if (label.includes("Publisher")) {
                     event.preventDefault();
                     openPublisherManagement("publishers");
+                  } else if (label.includes("Advertiser")) {
+                    event.preventDefault();
+                    openAdvertiserManagement(label);
                   } else {
-                    showList(label.includes("Advertiser") ? "advertisers" : "publishers");
+                    showList("publishers");
                   }
                 }}
               >
@@ -572,7 +606,7 @@ function AdminDashboard() {
               "Rejected",
               "Campaign Rules",
             ].map((label) => (
-              <a href="#admin-accounts" key={label} onClick={() => showList("campaigns")}>
+              <a href="#admin-accounts" key={label} onClick={(event) => { event.preventDefault(); openAdvertiserManagement(label); }}>
                 {label}
               </a>
             ))}
@@ -590,6 +624,8 @@ function AdminDashboard() {
                 onClick={(event) => {
                   if (label === "Produk" || label === "Offers") {
                     event.preventDefault();
+                    setAdvertiserManagementTab(null);
+                    setPublisherManagementTab(null);
                     setCatalogReviewOpen(true);
                     setOpenMenu("");
                   }
@@ -622,7 +658,7 @@ function AdminDashboard() {
           <AdminNavGroup
             icon={IconSpeakerphone}
             label="Advertiser Network"
-            active={activeList === "advertisers"}
+            active={activeList === "advertisers" || advertiserManagementTab !== null}
             open={openMenu === "advertiserNetwork"}
             onToggle={() => toggleMenu("advertiserNetwork")}
           >
@@ -633,7 +669,7 @@ function AdminDashboard() {
               "Advertiser Billing",
               "Advertiser Restrictions",
             ].map((label) => (
-              <a href="#admin-accounts" key={label} onClick={() => showList("advertisers")}>
+              <a href="#admin-accounts" key={label} onClick={(event) => { event.preventDefault(); openAdvertiserManagement(label); }}>
                 {label}
               </a>
             ))}
@@ -904,14 +940,20 @@ function AdminDashboard() {
           </div>
         </header>
 
-        {publisherManagementTab ? (
+        {advertiserManagementTab ? (
+          <AdminAdvertiserManagement
+            key={advertiserManagementTab}
+            initialTab={advertiserManagementTab}
+            onBack={() => setAdvertiserManagementTab("accounts")}
+          />
+        ) : publisherManagementTab ? (
           <AdminPublisherManagement
             key={publisherManagementTab}
             initialTab={publisherManagementTab}
-            onBack={() => setPublisherManagementTab(null)}
+            onBack={() => setAdvertiserManagementTab("accounts")}
           />
         ) : catalogReviewOpen ? (
-          <AdminCatalogReview onBack={() => setCatalogReviewOpen(false)} />
+          <AdminCatalogReview onBack={() => setAdvertiserManagementTab("accounts")} />
         ) : (
           <div className="admin-content-grid">
           <div className="admin-primary-column">
@@ -1186,8 +1228,7 @@ function AdminDashboard() {
               </div>
               <button
                 onClick={() => {
-                  showList("advertisers");
-                  setManagedAccount("Tambah advertiser · pratinjau");
+                  openAdvertiserManagement("advertisers");
                 }}
                 type="button"
               >
@@ -1195,7 +1236,7 @@ function AdminDashboard() {
                   <IconSpeakerphone size={15} />
                 </span>
                 <b>
-                  Tambah Advertiser<small>Daftarkan advertiser baru</small>
+                  Kelola Advertiser<small>Akun, campaign, supply, dan review</small>
                 </b>
                 <IconChevronRight size={13} />
               </button>
@@ -1211,7 +1252,7 @@ function AdminDashboard() {
                 </b>
                 <IconChevronRight size={13} />
               </button>
-              <button onClick={() => showList("campaigns")} type="button">
+              <button onClick={() => openAdvertiserManagement("campaigns")} type="button">
                 <span>
                   <IconTargetArrow size={15} />
                 </span>
