@@ -39,6 +39,10 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AdminCatalogReview } from "@/components/AdminCatalogReview";
+import {
+  AdminPublisherManagement,
+  type AdminPublisherTab,
+} from "@/components/AdminPublisherManagement";
 
 import "../components/admin.css";
 
@@ -66,13 +70,6 @@ const metrics = [
     change: "8,3%",
     icon: IconSpeakerphone,
     tone: "cyan",
-  },
-  {
-    label: "Total Publisher",
-    value: "1.892",
-    change: "15,7%",
-    icon: IconUserCheck,
-    tone: "green",
   },
   {
     label: "Total Campaign",
@@ -185,44 +182,6 @@ const advertisers = [
   },
 ];
 
-const publishers = [
-  {
-    name: "Budi Santoso",
-    email: "budi@publisher.id",
-    channel: "Website & YouTube",
-    status: "Aktif",
-    campaigns: "18 campaign",
-  },
-  {
-    name: "Santi Rahma",
-    email: "santi@creator.id",
-    channel: "Instagram",
-    status: "Aktif",
-    campaigns: "12 campaign",
-  },
-  {
-    name: "Dimas Pratama",
-    email: "dimas@media.id",
-    channel: "Website",
-    status: "Review",
-    campaigns: "5 campaign",
-  },
-  {
-    name: "Nadia Putri",
-    email: "nadia@social.id",
-    channel: "TikTok & Instagram",
-    status: "Aktif",
-    campaigns: "9 campaign",
-  },
-  {
-    name: "Arif Nugraha",
-    email: "arif@publisher.id",
-    channel: "YouTube",
-    status: "Aktif",
-    campaigns: "7 campaign",
-  },
-];
-
 const recentActivity = [
   {
     title: "Campaign baru dibuat",
@@ -230,13 +189,6 @@ const recentActivity = [
     time: "14:32",
     tone: "green",
     icon: IconCircleCheck,
-  },
-  {
-    title: "Publisher terdaftar",
-    detail: "Budi Santoso",
-    time: "13:45",
-    tone: "violet",
-    icon: IconUser,
   },
   {
     title: "Konversi masuk",
@@ -251,13 +203,6 @@ const recentActivity = [
     time: "11:10",
     tone: "green",
     icon: IconWallet,
-  },
-  {
-    title: "Pembayaran disetujui",
-    detail: "Rp 2.000.000 · Budi Santoso",
-    time: "10:55",
-    tone: "blue",
-    icon: IconCircleCheck,
   },
 ];
 
@@ -340,7 +285,7 @@ function AdminAccountTable({
   search: string;
   onManage: (name: string) => void;
 }) {
-  const rows: AdminAccountRow[] = list === "advertisers" ? advertisers : publishers;
+  const rows: AdminAccountRow[] = list === "advertisers" ? advertisers : [];
   const query = search.trim().toLocaleLowerCase("id-ID");
   const filteredRows = rows.filter((row) =>
     `${row.name} ${row.email} ${row.segment ?? row.channel}`
@@ -483,6 +428,8 @@ function AdminDashboard() {
   const [managedAccount, setManagedAccount] = useState("");
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [catalogReviewOpen, setCatalogReviewOpen] = useState(false);
+  const [publisherManagementTab, setPublisherManagementTab] =
+    useState<AdminPublisherTab | null>(null);
 
   const visibleCampaigns = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("id-ID");
@@ -499,6 +446,24 @@ function AdminDashboard() {
 
   const showList = (list: AdminList) => {
     setActiveList(list);
+    setManagedAccount("");
+  };
+
+  const openPublisherManagement = (label: string) => {
+    const lowerLabel = label.toLocaleLowerCase("id-ID");
+    const tab: AdminPublisherTab = lowerLabel.includes("channel")
+      ? "channels"
+      : lowerLabel.includes("application") || lowerLabel.includes("pengajuan")
+        ? "applications"
+        : lowerLabel.includes("performance") || lowerLabel.includes("performa")
+          ? "performance"
+          : lowerLabel.includes("payout") || lowerLabel.includes("penarikan")
+            ? "withdrawals"
+            : lowerLabel.includes("conversion") || lowerLabel.includes("tracking")
+              ? "conversions"
+              : "publishers";
+    setPublisherManagementTab(tab);
+    setCatalogReviewOpen(false);
     setManagedAccount("");
   };
 
@@ -548,9 +513,16 @@ function AdminDashboard() {
               "Banned",
             ].map((label) => (
               <a
-                href="#admin-accounts"
+                href={label === "Publisher" ? "#publisher-control" : "#admin-accounts"}
                 key={label}
-                onClick={() => showList(label === "Advertiser" ? "advertisers" : "publishers")}
+                onClick={(event) => {
+                  if (label === "Publisher") {
+                    event.preventDefault();
+                    openPublisherManagement("publishers");
+                  } else {
+                    showList(label === "Advertiser" ? "advertisers" : "publishers");
+                  }
+                }}
               >
                 {label}
               </a>
@@ -570,11 +542,16 @@ function AdminDashboard() {
               "Verification Queue",
             ].map((label) => (
               <a
-                href="#admin-accounts"
+                href={label.includes("Publisher") ? "#publisher-control" : "#admin-accounts"}
                 key={label}
-                onClick={() =>
-                  showList(label.includes("Advertiser") ? "advertisers" : "publishers")
-                }
+                onClick={(event) => {
+                  if (label.includes("Publisher")) {
+                    event.preventDefault();
+                    openPublisherManagement("publishers");
+                  } else {
+                    showList(label.includes("Advertiser") ? "advertisers" : "publishers");
+                  }
+                }}
               >
                 {label}
               </a>
@@ -625,7 +602,7 @@ function AdminDashboard() {
           <AdminNavGroup
             icon={IconUserCheck}
             label="Publisher Network"
-            active={activeList === "publishers"}
+            active={activeList === "publishers" || publisherManagementTab !== null}
             open={openMenu === "publisherNetwork"}
             onToggle={() => toggleMenu("publisherNetwork")}
           >
@@ -637,7 +614,7 @@ function AdminDashboard() {
               "Publisher Payout",
               "Publisher Restrictions",
             ].map((label) => (
-              <a href="#admin-accounts" key={label} onClick={() => showList("publishers")}>
+              <a href="#publisher-control" key={label} onClick={(event) => { event.preventDefault(); openPublisherManagement(label); }}>
                 {label}
               </a>
             ))}
@@ -927,7 +904,13 @@ function AdminDashboard() {
           </div>
         </header>
 
-        {catalogReviewOpen ? (
+        {publisherManagementTab ? (
+          <AdminPublisherManagement
+            key={publisherManagementTab}
+            initialTab={publisherManagementTab}
+            onBack={() => setPublisherManagementTab(null)}
+          />
+        ) : catalogReviewOpen ? (
           <AdminCatalogReview onBack={() => setCatalogReviewOpen(false)} />
         ) : (
           <div className="admin-content-grid">
@@ -1217,17 +1200,14 @@ function AdminDashboard() {
                 <IconChevronRight size={13} />
               </button>
               <button
-                onClick={() => {
-                  showList("publishers");
-                  setManagedAccount("Tambah publisher · pratinjau");
-                }}
+                onClick={() => openPublisherManagement("publishers")}
                 type="button"
               >
                 <span>
                   <IconUserCheck size={15} />
                 </span>
                 <b>
-                  Tambah Publisher<small>Daftarkan publisher baru</small>
+                  Kelola Publisher<small>Review akun, offer, dan penarikan</small>
                 </b>
                 <IconChevronRight size={13} />
               </button>

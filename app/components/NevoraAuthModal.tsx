@@ -2,6 +2,7 @@ import { appPath } from "@agent-native/core/client/api-path";
 import {
   actionErrorMessage,
   useActionMutation,
+  useActionQuery,
 } from "@agent-native/core/client/hooks";
 import {
   IconArrowRight,
@@ -65,6 +66,11 @@ export function NevoraAuthModal({
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
   const saveProfile = useActionMutation("save-advertiser-profile");
+  const accountHome = useActionQuery(
+    "get-current-account-home",
+    {},
+    { enabled: false },
+  );
 
   const switchMode = (nextMode: AuthMode) => {
     setNotice("");
@@ -92,7 +98,9 @@ export function NevoraAuthModal({
         await postAuth("/_agent-native/auth/register", {
           email,
           password,
-          callbackURL: appPath("/advertiser"),
+          callbackURL: appPath(
+            selectedRole === "Publisher" ? "/publisher" : "/advertiser",
+          ),
         });
       }
       await postAuth("/_agent-native/auth/login", { email, password });
@@ -105,12 +113,19 @@ export function NevoraAuthModal({
           role: selectedRole,
         });
         window.location.assign(
-          appPath(profile.role === "Advertiser" ? "/advertiser" : "/"),
+          appPath(
+            profile.role === "Publisher"
+              ? "/publisher"
+              : profile.role === "Advertiser"
+                ? "/advertiser"
+                : "/",
+          ),
         );
         return;
       }
 
-      window.location.assign(appPath("/advertiser"));
+      const destination = await accountHome.refetch();
+      window.location.assign(appPath(destination.data?.path ?? "/"));
     } catch (error) {
       setNotice(
         mode === "signup"

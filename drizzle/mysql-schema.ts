@@ -162,6 +162,119 @@ export const publisherChannels = mysqlTable(
   }),
 );
 
+export const publisherOfferApplications = mysqlTable(
+  "publisher_offer_applications",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    offerId: varchar("offer_id", { length: 36 }).notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("Pending"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => ({
+    publisherOfferUnique: uniqueIndex("publisher_offer_applications_uidx").on(
+      table.publisherEmail,
+      table.offerId,
+    ),
+    offerStatusIndex: index("publisher_offer_applications_offer_status_idx").on(
+      table.offerId,
+      table.status,
+    ),
+  }),
+);
+
+export const publisherTrackingLinks = mysqlTable(
+  "publisher_tracking_links",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    offerId: varchar("offer_id", { length: 36 }).notNull(),
+    token: varchar("token", { length: 64 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => ({
+    tokenUnique: uniqueIndex("publisher_tracking_links_token_uidx").on(table.token),
+    ownerOfferUnique: uniqueIndex("publisher_tracking_links_owner_offer_uidx").on(
+      table.publisherEmail,
+      table.offerId,
+    ),
+  }),
+);
+
+export const publisherClicks = mysqlTable(
+  "publisher_clicks",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    trackingLinkId: varchar("tracking_link_id", { length: 36 }).notNull(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    offerId: varchar("offer_id", { length: 36 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => ({
+    publisherCreatedIndex: index("publisher_clicks_owner_created_idx").on(
+      table.publisherEmail,
+      table.createdAt,
+    ),
+    offerCreatedIndex: index("publisher_clicks_offer_created_idx").on(
+      table.offerId,
+      table.createdAt,
+    ),
+  }),
+);
+
+export const publisherConversions = mysqlTable(
+  "publisher_conversions",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    clickId: varchar("click_id", { length: 36 }).notNull(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    offerId: varchar("offer_id", { length: 36 }).notNull(),
+    advertiserEmail: varchar("advertiser_email", { length: 320 }).notNull(),
+    externalEventId: varchar("external_event_id", { length: 160 }).notNull(),
+    payoutIdr: int("payout_idr").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("Pending"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => ({
+    advertiserEventUnique: uniqueIndex("publisher_conversions_advertiser_event_uidx").on(
+      table.advertiserEmail,
+      table.externalEventId,
+    ),
+    clickUnique: uniqueIndex("publisher_conversions_click_uidx").on(table.clickId),
+    publisherCreatedIndex: index("publisher_conversions_owner_created_idx").on(
+      table.publisherEmail,
+      table.createdAt,
+    ),
+    statusCreatedIndex: index("publisher_conversions_status_created_idx").on(
+      table.status,
+      table.createdAt,
+    ),
+  }),
+);
+
+export const publisherEarningEntries = mysqlTable(
+  "publisher_earning_entries",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    conversionId: varchar("conversion_id", { length: 36 }).notNull(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    offerId: varchar("offer_id", { length: 36 }).notNull(),
+    amountIdr: int("amount_idr").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => ({
+    conversionUnique: uniqueIndex("publisher_earning_entries_conversion_uidx").on(
+      table.conversionId,
+    ),
+    publisherCreatedIndex: index("publisher_earning_entries_owner_created_idx").on(
+      table.publisherEmail,
+      table.createdAt,
+    ),
+  }),
+);
+
 export const publisherCampaigns = mysqlTable(
   "publisher_campaigns",
   {
@@ -208,12 +321,42 @@ export const publisherWithdrawals = mysqlTable(
     publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
     amountIdr: int("amount_idr").notNull(),
     status: varchar("status", { length: 32 }).notNull().default("Pending"),
+    transferReference: varchar("transfer_reference", { length: 160 })
+      .notNull()
+      .default(""),
+    paidAt: datetime("paid_at", { mode: "string", fsp: 3 }),
+    reviewedBy: varchar("reviewed_by", { length: 320 }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => ({
     ownerCreatedIndex: index("publisher_withdrawals_owner_created_idx").on(
       table.publisherEmail,
+      table.createdAt,
+    ),
+  }),
+);
+
+export const publisherSupportTickets = mysqlTable(
+  "publisher_support_tickets",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    publisherEmail: varchar("publisher_email", { length: 320 }).notNull(),
+    subject: varchar("subject", { length: 160 }).notNull(),
+    message: text("message").notNull(),
+    status: varchar("status", { length: 24 }).notNull().default("Open"),
+    adminResponse: varchar("admin_response", { length: 4000 }).notNull().default(""),
+    reviewedBy: varchar("reviewed_by", { length: 320 }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => ({
+    ownerCreatedIndex: index("publisher_support_tickets_owner_created_idx").on(
+      table.publisherEmail,
+      table.createdAt,
+    ),
+    statusCreatedIndex: index("publisher_support_tickets_status_created_idx").on(
+      table.status,
       table.createdAt,
     ),
   }),

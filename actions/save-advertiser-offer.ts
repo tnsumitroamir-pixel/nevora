@@ -13,7 +13,7 @@ export default defineAction({
   description: "Create or update a draft offer owned by the signed-in advertiser.",
   schema: z.object({
     id: z.string().uuid().optional(),
-    productId: z.string().uuid().nullable(),
+    productId: z.string().uuid(),
     name: z.string().trim().min(1).max(160),
     payoutIdr: z.number().int().min(0).max(2_147_483_647),
   }),
