@@ -1,0 +1,1 @@
+import{n as e}from"../_runtime.mjs";import{n as t,t as n}from"./is-docker.mjs";import r from"node:fs";function i(){return a===void 0&&(a=o()||t()),a}var a,o,s=e((()=>{n(),o=()=>{try{return r.statSync(`/run/.containerenv`),!0}catch{return!1}}}));export{i as n,s as t};

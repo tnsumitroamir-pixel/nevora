@@ -44,10 +44,15 @@ export default defineAction({
         .insert(schema.users)
         .values({ email: ownerEmail, fullName, createdAt: now, updatedAt: now })
         .onDuplicateKeyUpdate({ set: { fullName, updatedAt: now } });
-      await tx
-        .insert(schema.accountRoles)
-        .values({ userEmail: ownerEmail, role, createdAt: now })
-        .onDuplicateKeyUpdate({ set: { createdAt: now } });
+      const accountRoles = ["Publisher", "Advertiser"].includes(role)
+        ? ["Konsumen", role]
+        : [role];
+      for (const accountRole of accountRoles) {
+        await tx
+          .insert(schema.accountRoles)
+          .values({ userEmail: ownerEmail, role: accountRole, createdAt: now })
+          .onDuplicateKeyUpdate({ set: { createdAt: now } });
+      }
 
       if (role === "Advertiser") {
         await tx

@@ -1,0 +1,1 @@
+import{n as e}from"../_runtime.mjs";function t(e,t,n){let r=n=>Object.defineProperty(e,t,{value:n,enumerable:!0,writable:!0});return Object.defineProperty(e,t,{configurable:!0,enumerable:!0,get(){let e=n();return r(e),e},set(e){r(e)}}),e}var n=e((()=>{}));export{n,t};

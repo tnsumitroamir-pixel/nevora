@@ -95,7 +95,7 @@ function DbSyncSetup() {
 
 export default function Root() {
   const [queryClient] = useState(() => createAgentNativeQueryClient());
-  const isPublicPath = ["/", "/advertiser", "/publisher", "/admin-login", "/install"].includes(
+  const isPublicPath = ["/", "/advertiser", "/publisher", "/user", "/admin-login", "/install"].includes(
     useLocation().pathname,
   );
   return (

@@ -1,0 +1,1 @@
+import{t as e}from"./createReactComponent-AmHI9id0.js";var t=e(`outline`,`chart-line`,`ChartLine`,[[`path`,{d:`M4 19l16 0`,key:`svg-0`}],[`path`,{d:`M4 15l4 -6l4 2l4 -5l4 4`,key:`svg-1`}]]);export{t};

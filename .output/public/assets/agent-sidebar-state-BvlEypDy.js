@@ -1,0 +1,1 @@
+var e=`agent-panel:state-change`;function t(){typeof window>`u`||window.dispatchEvent(new CustomEvent(`agent-panel:open`))}export{t as n,e as t};

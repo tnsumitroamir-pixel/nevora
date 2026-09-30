@@ -5,7 +5,7 @@ import { createAuthPlugin } from "@agent-native/core/server";
 // blank app defines its own brand on the login page when it needs one by setting loginHtml in this config.
 export default createAuthPlugin({
   publicPaths: ["/api/installer"],
-  workspaceAppPublicPaths: ["/", "/advertiser", "/publisher", "/admin-login", "/install"],
+  workspaceAppPublicPaths: ["/", "/advertiser", "/publisher", "/user", "/admin-login", "/install"],
   workspaceAppProtectedPaths: ["/admin"],
   rootAuth: false,
 });

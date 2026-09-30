@@ -1,0 +1,1 @@
+import{$u as e,ed as t}from"../agent-native-core+[...].mjs";const n=new Set([`127.0.0.1`,`::1`,`::ffff:127.0.0.1`]),r=new Set([`localhost`,`127.0.0.1`,`::1`]);function i(i){let a=t(i,{xForwardedFor:!1}),o=e(i,`host`)?.toLowerCase()??``,s=o.startsWith(`[`)?o.slice(1,o.indexOf(`]`)):o.split(`:`)[0];return!!(a&&n.has(a)&&r.has(s))}export{i as t};

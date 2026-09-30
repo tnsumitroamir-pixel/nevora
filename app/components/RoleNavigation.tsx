@@ -1,4 +1,5 @@
-import { IconChevronDown, type Icon } from "@tabler/icons-react";
+import { IconChevronDown, IconUser, type Icon } from "@tabler/icons-react";
+import { appPath } from "@agent-native/core/client/api-path";
 import { useState, type ReactNode } from "react";
 
 import "./role-navigation.css";
@@ -38,6 +39,10 @@ export function RoleNavigation({
       <a className="active" href={dashboardHref} aria-current="page">
         <DashboardIcon size={17} />
         <span>{dashboardLabel}</span>
+      </a>
+      <a className="role-navigation-user-link" href={appPath("/user")} aria-label="Dashboard Pengguna" title="Dashboard Pengguna">
+        <IconUser size={17} />
+        <span>Dashboard Pengguna</span>
       </a>
       {sections.map(({ id, label, icon: SectionIcon, items }) => {
         const open = openSection === id;

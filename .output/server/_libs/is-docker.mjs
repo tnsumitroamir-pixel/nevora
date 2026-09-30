@@ -1,0 +1,1 @@
+import{n as e}from"../_runtime.mjs";import t from"node:fs";function n(){try{return t.statSync(`/.dockerenv`),!0}catch{return!1}}function r(){try{return t.readFileSync(`/proc/self/cgroup`,`utf8`).includes(`docker`)}catch{return!1}}function i(){return a===void 0&&(a=n()||r()),a}var a,o=e((()=>{}));export{i as n,o as t};

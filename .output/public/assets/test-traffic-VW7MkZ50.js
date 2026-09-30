@@ -1,0 +1,1 @@
+function e(e){return typeof e==`string`&&e.trim().toLowerCase()===`beta-e2e`}export{e as t};

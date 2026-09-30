@@ -42,6 +42,7 @@ function viewForPath(pathname: string): string {
   if (pathname === "/admin") return "admin-dashboard";
   if (pathname === "/publisher") return "publisher-dashboard";
   if (pathname === "/advertiser") return "advertiser-dashboard";
+  if (pathname === "/user") return "user-dashboard";
   if (pathname === "/") return "home";
   return "home";
 }
@@ -56,6 +57,8 @@ function pathForView(view?: string): string {
       return "/publisher";
     case "advertiser-dashboard":
       return "/advertiser";
+    case "user-dashboard":
+      return "/user";
     case "home":
       return "/";
     default:

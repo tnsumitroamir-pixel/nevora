@@ -5,7 +5,7 @@ export function meta() {
     { title: "Dashboard Pengguna — Nevora" },
     {
       name: "description",
-      content: "Dashboard pengguna Nevora dengan ringkasan reward dan offer.",
+      content: "Dashboard akun dan role pengguna Nevora; fitur User yang belum didukung backend ditampilkan sebagai belum tersedia.",
     },
   ];
 }

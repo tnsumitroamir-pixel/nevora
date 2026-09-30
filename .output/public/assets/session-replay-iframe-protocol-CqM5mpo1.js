@@ -1,0 +1,1 @@
+var e=`data-agent-native-session-replay`,t=`agent-native-session-replay:probe`,n=`agent-native-session-replay:start`,r=`agent-native-session-replay:stop`;function i(e,t){if(t===`about:srcdoc`)return e!==`null`&&e!==``;try{let n=new URL(t).origin;return n!==`null`&&e===n}catch{return!1}}export{i as a,r as i,t as n,n as r,e as t};

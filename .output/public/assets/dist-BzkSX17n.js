@@ -1,0 +1,1 @@
+import{i as e}from"./rolldown-runtime-aKtaBQYM.js";import{t}from"./react-CABnUpkU.js";import{t as n}from"./jsx-runtime-CoAZnjn0.js";var r=e(t(),1);n();var i=r.createContext(void 0);function a(e){let t=r.useContext(i);return e||t||`ltr`}function o(e,[t,n]){return Math.min(n,Math.max(t,e))}export{a as n,o as t};

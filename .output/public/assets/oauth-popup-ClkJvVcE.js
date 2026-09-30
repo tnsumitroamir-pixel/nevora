@@ -1,0 +1,1 @@
+import{n as e}from"./api-path-BoWlbS9q.js";function t(){return typeof window>`u`?``:new URL(e(`/_agent-native/oauth/popup`),window.location.href).href}function n({initialUrl:e,features:n}={}){if(typeof window>`u`)return null;let r=new URL(e||t(),window.location.href);return r.protocol!==`http:`&&r.protocol!==`https:`?null:window.open(r.href,`_blank`,n)}export{n,t};

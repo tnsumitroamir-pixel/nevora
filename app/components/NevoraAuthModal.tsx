@@ -99,7 +99,13 @@ export function NevoraAuthModal({
           email,
           password,
           callbackURL: appPath(
-            selectedRole === "Publisher" ? "/publisher" : "/advertiser",
+            selectedRole === "Publisher"
+              ? "/publisher"
+              : selectedRole === "Advertiser"
+                ? "/advertiser"
+                : selectedRole === "Konsumen"
+                  ? "/user"
+                  : "/",
           ),
         });
       }
@@ -118,7 +124,9 @@ export function NevoraAuthModal({
               ? "/publisher"
               : profile.role === "Advertiser"
                 ? "/advertiser"
-                : "/",
+                : profile.role === "Konsumen"
+                  ? "/user"
+                  : "/",
           ),
         );
         return;
