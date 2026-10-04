@@ -132,7 +132,8 @@ function NevoraLogo({ light = false }: { light?: boolean }) {
       aria-label="Nevora, beranda"
     >
       <span className="nevora-logo-mark" aria-hidden="true">
-        N
+        <i />
+        <i />
       </span>
       <span>Nevora</span>
     </a>
